@@ -1,0 +1,20 @@
+{
+    "generation_info": {
+        "timestamp": "2026-04-29T00:55:41.312002",
+        "main_model": "gpt-5.5",
+        "generator_version": "1.0.1",
+        "repo_path": "/Users/liang/code/max-agent",
+        "commit_id": null
+    },
+    "statistics": {
+        "total_components": 3,
+        "leaf_nodes": 3,
+        "max_depth": 2
+    },
+    "files_generated": [
+        "overview.md",
+        "module_tree.json",
+        "first_module_tree.json",
+        "backend.md"
+    ]
+}
