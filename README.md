@@ -26,9 +26,11 @@ max-agent 是一个智能体管理平台，面向智能体对话、配置管理�
 ### 后端
 
 - FastAPI
+- Pydantic
 - SQLAlchemy
 - PostgreSQL
 - pgvector
+- Uvicorn
 
 后端负责：
 
@@ -56,6 +58,7 @@ max-agent 是一个智能体管理平台，面向智能体对话、配置管理�
 
 - Vue 前端负责用户交互、对话展示、配置编辑与后台操作入口
 - FastAPI 后端负责业务编排、认证鉴权、数据访问与外部服务集成
+- Pydantic 用于请求与响应模型定义及数据校验
 - PostgreSQL 存储核心业务数据
 - pgvector 为知识检索、语义搜索或智能体记忆提供向量能力
 - Redis 用于热点数据缓存、登录态约束与短时状态管理
@@ -77,11 +80,11 @@ max-agent 是一个智能体管理平台，面向智能体对话、配置管理�
 ```bash
 cd backend
 uv sync
-uv run fastapi dev main.py
+uv run uvicorn main:app --reload
 ```
 
 - `uv sync`: 安装并同步 Python 依赖
-- `uv run fastapi dev main.py`: 启动 FastAPI 开发服务
+- `uv run uvicorn main:app --reload`: 使用 Uvicorn 启动 FastAPI 开发服务
 
 ### 前端
 

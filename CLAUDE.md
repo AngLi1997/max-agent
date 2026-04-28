@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 这是一个前后端分离的双目录仓库，没有根级别的 workspace 或统一任务入口：
 
-- `backend/`: 独立的 Python/FastAPI 服务，使用 `uv` 管理依赖。
+- `backend/`: 独立的 Python/FastAPI 服务，使用 `uv` 管理依赖，采用 Pydantic 做数据校验，并使用 Uvicorn 作为启动服务器。
 - `frontend/`: 独立的 Vue 3 + TypeScript + Vite 单页应用，使用 `pnpm` 管理依赖。
 
 前后端当前是并列初始化状态，而不是已经打通的全栈应用：仓库里还没有前端请求后端的代码，也没有 Vite 代理配置。
@@ -17,11 +17,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 uv sync
-uv run fastapi dev main.py
+uv run uvicorn main:app --reload
 ```
 
 - 安装/同步依赖: `uv sync`
-- 启动开发服务器: `uv run fastapi dev main.py`
+- 启动开发服务器: `uv run uvicorn main:app --reload`
 
 当前 `backend/pyproject.toml` 没有配置测试、lint 或额外脚本；仓库里也没有后端测试文件，因此现在没有可运行的单测命令。
 
@@ -48,6 +48,8 @@ pnpm preview
 后端目前是一个极简 FastAPI 应用，所有服务端逻辑都在 `backend/main.py`：
 
 - 在模块顶层创建 `app = FastAPI()`。
+- 使用 Pydantic 作为 FastAPI 请求/响应模型的数据校验基础。
+- 通过 Uvicorn 运行 ASGI 应用。
 - 直接在同一文件中声明路由。
 - 当前仅有两个接口：`GET /` 和 `GET /items/{item_id}`。
 
