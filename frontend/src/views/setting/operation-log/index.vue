@@ -73,7 +73,7 @@ import { getOperationLogApi, type OperationLogItem } from '../../../api/log'
 const columns = [
   { title: '操作人', dataIndex: 'operator', key: 'operator' },
   { title: '模块', dataIndex: 'module', key: 'module' },
-  { title: '操作类型', dataIndex: 'action', key: 'action' },
+  { title: '操作类型', dataIndex: 'action', key: 'actionType' },
   { title: '请求方法', dataIndex: 'method', key: 'method' },
   { title: '结果', dataIndex: 'result', key: 'result' },
   { title: '时间', dataIndex: 'time', key: 'time' },
