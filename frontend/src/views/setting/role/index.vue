@@ -91,12 +91,10 @@
       </template>
     </a-drawer>
 
-    <a-modal
+    <a-drawer
+      v-model:open="permissionModalVisible"
       :title="`分配权限 - ${permissionRoleName}`"
-      :open="permissionModalVisible"
-      @ok="handlePermissionOk"
-      @cancel="permissionModalVisible = false"
-      width="480"
+      :width="drawerWidth"
     >
       <a-tree
         v-model:checkedKeys="checkedPermissions"
@@ -105,7 +103,13 @@
         :field-names="{ title: 'title', key: 'key', children: 'children' }"
         default-expand-all
       />
-    </a-modal>
+      <template #footer>
+        <div style="text-align: right;">
+          <a-button style="margin-right: 8px;" @click="permissionModalVisible = false">取消</a-button>
+          <a-button type="primary" @click="handlePermissionOk">确定</a-button>
+        </div>
+      </template>
+    </a-drawer>
   </div>
 </template>
 

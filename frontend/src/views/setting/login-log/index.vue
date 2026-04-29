@@ -23,6 +23,7 @@
 
     <a-card title="登录日志列表">
       <a-table
+        size="small"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
@@ -34,18 +35,25 @@
             <a-tag :color="record.result === '成功' ? 'green' : 'red'">{{ record.result }}</a-tag>
           </template>
           <template v-if="column.key === 'action'">
-            <a-button type="link" @click="handleViewDetail(record)">查看详情</a-button>
+            <a-dropdown>
+              <a-button type="primary" size="small">
+                操作 <DownOutlined />
+              </a-button>
+              <template #overlay>
+                <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
+                  <a-menu-item key="detail"><EyeOutlined /> 查看详情</a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </template>
         </template>
       </a-table>
     </a-card>
 
-    <a-modal
+    <a-drawer
+      v-model:open="detailVisible"
       title="登录日志详情"
-      :open="detailModalVisible"
-      :footer="null"
-      @cancel="detailModalVisible = false"
-      width="640"
+      :width="drawerWidth"
     >
       <a-descriptions bordered :column="1" size="small">
         <a-descriptions-item label="用户名">{{ currentDetail?.username }}</a-descriptions-item>
@@ -55,7 +63,7 @@
         <a-descriptions-item label="登录结果">{{ currentDetail?.result }}</a-descriptions-item>
         <a-descriptions-item label="登录时间">{{ currentDetail?.time }}</a-descriptions-item>
       </a-descriptions>
-    </a-modal>
+    </a-drawer>
   </div>
 </template>
 
@@ -63,6 +71,8 @@
 defineOptions({ name: 'SettingLoginLog' })
 
 import { ref, reactive, onMounted } from 'vue'
+import { DownOutlined, EyeOutlined } from '@ant-design/icons-vue'
+import { useDrawerWidth } from '@/composables/useDrawerWidth'
 import { getLoginLogApi, type LoginLogItem } from '../../../api/log'
 
 const columns = [
@@ -72,14 +82,15 @@ const columns = [
   { title: '设备/浏览器', dataIndex: 'device', key: 'device' },
   { title: '登录结果', dataIndex: 'result', key: 'result' },
   { title: '登录时间', dataIndex: 'time', key: 'time' },
-  { title: '操作', key: 'action', width: 100 },
+  { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
 const loading = ref(false)
 const dataSource = ref<LoginLogItem[]>([])
 const total = ref(0)
-const detailModalVisible = ref(false)
+const detailVisible = ref(false)
 const currentDetail = ref<LoginLogItem | null>(null)
+const { drawerWidth } = useDrawerWidth()
 
 const searchForm = reactive({
   username: '',
@@ -111,9 +122,15 @@ function handleReset() {
   fetchData()
 }
 
+function handleActionMenuClick({ key }: { key: string }, record: LoginLogItem) {
+  if (key === 'detail') {
+    handleViewDetail(record)
+  }
+}
+
 function handleViewDetail(record: LoginLogItem) {
   currentDetail.value = record
-  detailModalVisible.value = true
+  detailVisible.value = true
 }
 
 onMounted(fetchData)

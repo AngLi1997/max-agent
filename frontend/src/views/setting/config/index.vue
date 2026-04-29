@@ -20,6 +20,7 @@
         </a-button>
       </template>
       <a-table
+        size="small"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
@@ -28,8 +29,17 @@
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'action'">
-            <a-button type="link" @click="handleEdit(record)">编辑</a-button>
-            <a-button type="link" danger @click="handleDelete(record)">删除</a-button>
+            <a-dropdown>
+              <a-button type="primary" size="small">
+                操作 <DownOutlined />
+              </a-button>
+              <template #overlay>
+                <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
+                  <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
+                  <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </template>
         </template>
       </a-table>
@@ -38,7 +48,7 @@
     <a-drawer
       :title="drawerTitle"
       :open="drawerVisible"
-      width="520"
+      :width="drawerWidth"
       @close="drawerVisible = false"
     >
       <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
@@ -70,7 +80,8 @@ defineOptions({ name: 'SettingConfig' })
 
 import { ref, reactive, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DownOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { useDrawerWidth } from '@/composables/useDrawerWidth'
 import {
   getConfigListApi,
   createConfigApi,
@@ -84,7 +95,7 @@ const columns = [
   { title: 'key', dataIndex: 'key', key: 'key' },
   { title: 'value', dataIndex: 'value', key: 'value' },
   { title: '描述', dataIndex: 'description', key: 'description' },
-  { title: '操作', key: 'action', width: 120 },
+  { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
 const loading = ref(false)
@@ -94,6 +105,7 @@ const drawerVisible = ref(false)
 const drawerTitle = ref('新增配置')
 const editingId = ref<number | null>(null)
 const submitLoading = ref(false)
+const { drawerWidth } = useDrawerWidth()
 
 const searchForm = reactive({ key: '' })
 const formState = reactive({ name: '', key: '', value: '', description: '' })
@@ -122,6 +134,20 @@ function handleAdd() {
   formState.value = ''
   formState.description = ''
   drawerVisible.value = true
+}
+
+function handleActionMenuClick({ key }: { key: string }, record: ConfigItem) {
+  handleMenuClick(key, record)
+}
+
+function handleMenuClick(key: string, record: ConfigItem) {
+  if (key === 'edit') {
+    handleEdit(record)
+    return
+  }
+  if (key === 'delete') {
+    handleDelete(record)
+  }
 }
 
 function handleEdit(record: ConfigItem) {

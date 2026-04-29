@@ -26,6 +26,7 @@
 
     <a-card title="操作日志列表">
       <a-table
+        size="small"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
@@ -40,18 +41,25 @@
             <a-tag :color="record.result === '成功' ? 'green' : 'red'">{{ record.result }}</a-tag>
           </template>
           <template v-if="column.key === 'action'">
-            <a-button type="link" @click="handleViewDetail(record)">查看详情</a-button>
+            <a-dropdown>
+              <a-button type="primary" size="small">
+                操作 <DownOutlined />
+              </a-button>
+              <template #overlay>
+                <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
+                  <a-menu-item key="detail"><EyeOutlined /> 查看详情</a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </template>
         </template>
       </a-table>
     </a-card>
 
-    <a-modal
+    <a-drawer
+      v-model:open="detailVisible"
       title="日志详情"
-      :open="detailModalVisible"
-      :footer="null"
-      @cancel="detailModalVisible = false"
-      width="640"
+      :width="drawerWidth"
     >
       <a-descriptions bordered :column="1" size="small">
         <a-descriptions-item label="操作人">{{ currentDetail?.operator }}</a-descriptions-item>
@@ -62,7 +70,7 @@
         <a-descriptions-item label="时间">{{ currentDetail?.time }}</a-descriptions-item>
         <a-descriptions-item label="详情">{{ currentDetail?.detail }}</a-descriptions-item>
       </a-descriptions>
-    </a-modal>
+    </a-drawer>
   </div>
 </template>
 
@@ -70,6 +78,8 @@
 defineOptions({ name: 'SettingOperationLog' })
 
 import { ref, reactive, onMounted } from 'vue'
+import { DownOutlined, EyeOutlined } from '@ant-design/icons-vue'
+import { useDrawerWidth } from '@/composables/useDrawerWidth'
 import { getOperationLogApi, type OperationLogItem } from '../../../api/log'
 
 const columns = [
@@ -79,7 +89,7 @@ const columns = [
   { title: '请求方法', dataIndex: 'method', key: 'method' },
   { title: '结果', dataIndex: 'result', key: 'result' },
   { title: '时间', dataIndex: 'time', key: 'time' },
-  { title: '操作', key: 'action', width: 100 },
+  { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
 const methodColorMap: Record<string, string> = {
@@ -92,8 +102,9 @@ const methodColorMap: Record<string, string> = {
 const loading = ref(false)
 const dataSource = ref<OperationLogItem[]>([])
 const total = ref(0)
-const detailModalVisible = ref(false)
+const detailVisible = ref(false)
 const currentDetail = ref<OperationLogItem | null>(null)
+const { drawerWidth } = useDrawerWidth()
 
 const searchForm = reactive({
   operator: '',
@@ -125,9 +136,15 @@ function handleReset() {
   fetchData()
 }
 
+function handleActionMenuClick({ key }: { key: string }, record: OperationLogItem) {
+  if (key === 'detail') {
+    handleViewDetail(record)
+  }
+}
+
 function handleViewDetail(record: OperationLogItem) {
   currentDetail.value = record
-  detailModalVisible.value = true
+  detailVisible.value = true
 }
 
 onMounted(fetchData)
