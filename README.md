@@ -116,6 +116,12 @@ pnpm preview
 - `pnpm build`: 构建生产产物
 - `pnpm preview`: 本地预览构建结果
 
+## 前端启动
+
+- `cd frontend`
+- `pnpm install`
+- `pnpm dev`
+
 ## 当前仓库状态
 
 当前仓库已经具备前后端基础工程目录：
