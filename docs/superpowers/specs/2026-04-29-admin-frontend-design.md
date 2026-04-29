@@ -2,7 +2,7 @@
 
 ## 概述
 
-基于 Ant Design Vue 4.x 开发的后台管理系统前端，采用浅色企业风视觉风格、侧边栏导航布局。包含登录页和六个业务模块：仪表盘、用户管理、模型管理、Skills 管理、工具管理、系统设置。
+基于 Ant Design Vue 4.x 开发的后台管理系统前端，采用浅色企业风视觉风格、侧边栏导航布局。包含登录页，以及仪表盘、模型管理、Skills 管理、工具管理和系统设置五个一级模块；其中系统设置下包含用户管理、角色管理、权限管理、菜单配置、系统配置、操作日志、登录日志等二级功能页面。
 
 ## 技术栈
 
@@ -32,11 +32,17 @@ frontend/src/
 ├── views/
 │   ├── login/        # 登录页
 │   ├── dashboard/    # 仪表盘
-│   ├── user/         # 用户管理
 │   ├── model/        # 模型管理
 │   ├── skill/        # Skills 管理
 │   ├── tool/         # 工具管理
-│   └── setting/      # 系统设置
+│   └── setting/
+│       ├── user/     # 用户管理
+│       ├── role/     # 角色管理
+│       ├── permission/ # 权限管理
+│       ├── menu/     # 菜单配置
+│       ├── config/   # 系统配置
+│       ├── operation-log/ # 操作日志
+│       └── login-log/ # 登录日志
 ├── App.vue
 ├── main.ts
 └── style.css         # 全局基础样式（极简）
@@ -49,21 +55,27 @@ frontend/src/
 采用 antd 的 `a-layout` 组件组合：
 
 - **左侧 `a-layout-sider`**：可折叠侧边栏，展开宽度 220px，折叠后 80px。包含产品 logo 和垂直菜单。
-- **顶部 `a-layout-header`**：右侧放用户头像下拉菜单（个人信息、退出登录）。
+- **顶部 `a-layout-header`**：左侧展示品牌名 **Max-Agent**，右侧放用户头像下拉菜单（个人信息、退出登录）。
 - **中间 `a-layout-content`**：带面包屑导航 + 页面内容区，内容区有内边距。
 
 ### 侧边栏菜单
 
-一级菜单，不做嵌套子菜单：
+一级菜单 + 系统设置下展开二级菜单：
 
-| 菜单项 | 路由 | 图标 |
-|--------|------|------|
-| 仪表盘 | /dashboard | DashboardOutlined |
-| 用户管理 | /user | UserOutlined |
-| 模型管理 | /model | RobotOutlined |
-| Skills 管理 | /skill | ThunderboltOutlined |
-| 工具管理 | /tool | ToolOutlined |
-| 系统设置 | /setting | SettingOutlined |
+| 层级 | 菜单项 | 路由 | 图标 |
+|------|--------|------|------|
+| 一级 | 仪表盘 | /dashboard | DashboardOutlined |
+| 一级 | 模型管理 | /model | RobotOutlined |
+| 一级 | Skills 管理 | /skill | ThunderboltOutlined |
+| 一级 | 工具管理 | /tool | ToolOutlined |
+| 一级 | 系统设置 | — | SettingOutlined |
+| 二级 | 用户管理 | /setting/user | UserOutlined |
+| 二级 | 角色管理 | /setting/role | TeamOutlined |
+| 二级 | 权限管理 | /setting/permission | SafetyCertificateOutlined |
+| 二级 | 菜单配置 | /setting/menu | MenuOutlined |
+| 二级 | 系统配置 | /setting/config | ControlOutlined |
+| 二级 | 操作日志 | /setting/operation-log | FileTextOutlined |
+| 二级 | 登录日志 | /setting/login-log | LoginOutlined |
 
 ## 登录页
 
@@ -82,13 +94,6 @@ frontend/src/
 
 - 顶部 4 个统计卡片（`a-card` + `a-statistic`）：用户数、模型数、Skills 数、工具数
 - 下方趋势折线图（echarts via vue-echarts），展示近 7 天数据趋势
-
-### 用户管理 /user
-
-- 搜索栏：用户名关键词搜索 + 状态筛选
-- 操作按钮：新增用户
-- 表格列：用户名、邮箱、角色、状态（标签）、创建时间、操作（编辑/删除）
-- 新增/编辑：抽屉表单（`a-drawer` + `a-form`）
 
 ### 模型管理 /model
 
@@ -111,11 +116,58 @@ frontend/src/
 - 表格列：名称、类型、状态、创建时间、操作
 - 新增/编辑：抽屉表单
 
-### 系统设置 /setting
+### 系统设置
 
-- Tab 页形式（`a-tabs`）：
-  - 基础配置：站点名称、站点描述等表单
-  - 通知配置：通知开关、通知渠道等表单
+#### 用户管理 /setting/user
+
+- 搜索栏：用户名关键词搜索 + 状态筛选
+- 操作按钮：新增用户
+- 表格列：用户名、邮箱、角色、状态（标签）、创建时间、操作（编辑/删除）
+- 新增/编辑：抽屉表单（`a-drawer` + `a-form`）
+
+#### 角色管理 /setting/role
+
+- 搜索栏：角色名称搜索 + 状态筛选
+- 操作按钮：新增角色
+- 表格列：角色名称、角色编码、描述、状态、操作（编辑/删除/分配权限）
+- 新增/编辑：抽屉表单
+- 分配权限：弹窗中展示权限树（`a-tree` 带勾选）
+
+#### 权限管理 /setting/permission
+
+- 搜索栏：权限名称搜索 + 类型筛选
+- 操作按钮：新增权限
+- 表格列：权限名称、权限标识、类型、状态、操作（编辑/删除）
+- 新增/编辑：抽屉表单
+
+#### 菜单配置 /setting/menu
+
+- 树形表格（`a-table` 带 `childrenColumnName`）
+- 表格列：菜单名称、路由、权限标识、排序、状态、操作（编辑/删除/新增子菜单）
+- 新增/编辑：抽屉表单，包含父菜单选择（树形下拉）
+
+#### 系统配置 /setting/config
+
+- 搜索栏：按 key 搜索
+- 操作按钮：新增配置项
+- 表格列：配置项名称、key、value、描述、操作（编辑/删除）
+- 新增/编辑：抽屉表单
+
+#### 操作日志 /setting/operation-log
+
+- 搜索栏：操作人搜索 + 模块筛选 + 时间范围
+- 表格列：操作人、模块、操作类型、请求方法、结果、时间、操作（查看详情）
+- 只读，不提供编辑/删除
+
+#### 登录日志 /setting/login-log
+
+- 搜索栏：用户名搜索 + 登录结果筛选 + 时间范围
+- 表格列：用户名、登录 IP、登录地点、设备/浏览器、登录结果、登录时间、操作（查看详情）
+- 只读，不提供编辑/删除
+
+### 系统设置 /setting（原 Tab 页）
+
+已拆分为上述独立子页面，不再使用 Tab 页形式。
 
 ## 登录态与路由守卫
 
