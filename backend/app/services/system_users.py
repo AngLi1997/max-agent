@@ -1,3 +1,6 @@
+from secrets import choice
+from string import ascii_letters, digits
+
 from pwdlib import PasswordHash
 
 password_hash = PasswordHash.recommended()
@@ -22,3 +25,13 @@ def change_own_password(user, *, old_password: str, new_password: str) -> None:
         raise ValueError("旧密码错误")
     user.hashed_password = updated_hash or password_hash.hash(new_password)
     user.must_change_password = False
+
+
+def create_temporary_password(length: int = 12) -> str:
+    alphabet = ascii_letters + digits
+    return "".join(choice(alphabet) for _ in range(length))
+
+
+def delete_user_or_raise(user) -> None:
+    if user.is_builtin:
+        raise ValueError("内置用户不允许删除")

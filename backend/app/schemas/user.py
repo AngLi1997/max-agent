@@ -29,3 +29,33 @@ class CurrentUserResponse(BaseModel):
     permissions: list[str]
     menus: list[MenuSummary]
     mustChangePassword: bool
+
+
+class UserCreateRequest(BaseModel):
+    username: str
+    email: EmailStr
+    roleIds: list[int]
+    status: str = "active"
+
+
+class UserUpdateRequest(BaseModel):
+    username: str
+    email: EmailStr
+    roleIds: list[int]
+    status: str = "active"
+
+
+class UserListItem(BaseModel):
+    id: int
+    username: str
+    email: EmailStr
+    roles: list[RoleSummary]
+    roleIds: list[int]
+    status: str
+    createdAt: str
+    isBuiltin: bool
+
+
+class CreateUserResponse(BaseModel):
+    user: UserListItem
+    temporaryPassword: str

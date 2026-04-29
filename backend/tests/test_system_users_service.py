@@ -1,7 +1,13 @@
+import pytest
 from pwdlib import PasswordHash
 
 from app.models.user import User
-from app.services.system_users import build_current_user_payload, change_own_password
+from app.services.system_users import (
+    build_current_user_payload,
+    change_own_password,
+    create_temporary_password,
+    delete_user_or_raise,
+)
 
 
 password_hash = PasswordHash.recommended()
@@ -34,3 +40,23 @@ def test_change_own_password_clears_force_change_flag() -> None:
 
     change_own_password(user, old_password="old-pass", new_password="new-pass")
     assert user.must_change_password is False
+
+
+def test_create_temporary_password_returns_non_empty_secret() -> None:
+    password = create_temporary_password()
+    assert len(password) >= 12
+
+
+def test_delete_user_blocks_builtin_user() -> None:
+    user = User(
+        username="admin",
+        email="admin@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,
+        avatar="",
+        is_builtin=True,
+    )
+    with pytest.raises(ValueError, match="内置用户不允许删除"):
+        delete_user_or_raise(user)
