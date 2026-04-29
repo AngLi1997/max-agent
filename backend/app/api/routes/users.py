@@ -13,6 +13,7 @@ from app.schemas.role import StatusUpdateRequest
 from app.schemas.user import CreateUserResponse, RoleSummary, UserCreateRequest, UserListItem, UserUpdateRequest
 from app.services.audit import write_operation_log
 from app.services.auth import current_active_user
+from app.services.authorization import require_permission
 from app.services.system_users import create_temporary_password, delete_user_or_raise
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -61,7 +62,7 @@ async def list_users(
     username: str | None = None,
     status: str | None = None,
     session: AsyncSession = Depends(get_db_session),
-    _user: User = Depends(current_active_user),
+    _user: User = Depends(require_permission("setting:user")),
 ) -> ListResponse[UserListItem]:
     q = select(User).options(selectinload(User.roles))
     if username:
@@ -78,7 +79,7 @@ async def create_user(
     payload: UserCreateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("user:create")),
 ) -> CreateUserResponse:
     roles = await _load_roles_or_400(session, payload.roleIds)
     temporary_password = create_temporary_password()
@@ -124,11 +125,20 @@ async def update_user(
     payload: UserUpdateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("user:update")),
 ) -> UserListItem:
     target = await session.get(User, user_id, options=[selectinload(User.roles)])
     if target is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+
+    # Protect builtin users: cannot change status or roles
+    if target.is_builtin:
+        current_role_ids = sorted(r.id for r in target.roles)
+        new_role_ids = sorted(payload.roleIds)
+        if payload.status != target.status:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="内置用户不允许修改状态")
+        if new_role_ids != current_role_ids:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="内置用户不允许修改角色")
     roles = await _load_roles_or_400(session, payload.roleIds)
 
     target.username = payload.username
@@ -165,7 +175,7 @@ async def delete_user(
     user_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("user:delete")),
 ) -> dict[str, str]:
     target = await session.get(User, user_id)
     if target is None:
@@ -197,11 +207,15 @@ async def update_user_status(
     payload: StatusUpdateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("user:status")),
 ) -> dict[str, str]:
     target = await session.get(User, user_id)
     if target is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+
+    # Protect builtin users from status changes
+    if target.is_builtin:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="内置用户不允许修改状态")
 
     target.status = payload.status
     target.is_active = payload.status == "active"

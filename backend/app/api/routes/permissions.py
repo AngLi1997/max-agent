@@ -15,6 +15,7 @@ from app.schemas.permission import (
 from app.schemas.role import StatusUpdateRequest
 from app.services.audit import write_operation_log
 from app.services.auth import current_active_user
+from app.services.authorization import require_permission
 from app.services.system_permissions import delete_permission_or_raise
 
 router = APIRouter(prefix="/permissions", tags=["permissions"])
@@ -32,7 +33,7 @@ async def list_permissions(
     name: str | None = None,
     type: str | None = None,
     session: AsyncSession = Depends(get_db_session),
-    _user: User = Depends(current_active_user),
+    _user: User = Depends(require_permission("setting:permission")),
 ) -> ListResponse[PermissionListItem]:
     q = select(Permission)
     if name:
@@ -59,7 +60,7 @@ async def create_permission(
     payload: PermissionCreateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("permission:create")),
 ) -> PermissionListItem:
     perm = Permission(
         name=payload.name,
@@ -68,19 +69,19 @@ async def create_permission(
         status=payload.status,
     )
     session.add(perm)
-    await session.flush()
-    await write_operation_log(
-        session,
-        operator_id=user.id,
-        operator_name=user.username,
-        module="权限管理",
-        action="创建权限",
-        method="POST",
-        result="成功",
-        detail=f"创建权限 {perm.name}",
-        ip=request.client.host if request.client else "",
-    )
     try:
+        await session.flush()
+        await write_operation_log(
+            session,
+            operator_id=user.id,
+            operator_name=user.username,
+            module="权限管理",
+            action="创建权限",
+            method="POST",
+            result="成功",
+            detail=f"创建权限 {perm.name}",
+            ip=request.client.host if request.client else "",
+        )
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -102,7 +103,7 @@ async def update_permission(
     payload: PermissionUpdateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("permission:update")),
 ) -> PermissionListItem:
     perm = await session.get(Permission, perm_id)
     if perm is None:
@@ -144,7 +145,7 @@ async def delete_permission(
     perm_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("permission:delete")),
 ) -> dict[str, str]:
     perm = await session.get(Permission, perm_id)
     if perm is None:
@@ -181,7 +182,7 @@ async def update_permission_status(
     payload: StatusUpdateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("permission:status")),
 ) -> dict[str, str]:
     perm = await session.get(Permission, perm_id)
     if perm is None:

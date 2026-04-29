@@ -19,7 +19,8 @@ from app.services.auth import (
     get_redis_strategy,
     get_user_manager,
 )
-from app.services.rbac import build_visible_menu_tree, collect_user_permissions
+from app.services.rbac import collect_user_permissions
+from app.services.system_menus import build_menu_tree
 from app.services.system_users import build_current_user_payload, change_own_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -85,16 +86,41 @@ async def get_current_user(
     if full_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
-    root_menus = (
-        await session.scalars(
-            select(Menu)
-            .options(selectinload(Menu.children))
-            .where(Menu.parent_id.is_(None))
-        )
-    ).all()
+    # Load ALL menus flat — avoids async lazy-loading and supports arbitrary depth
+    all_menus = (await session.scalars(select(Menu).order_by(Menu.sort, Menu.id))).all()
 
     permissions = collect_user_permissions(full_user)
-    menus = build_visible_menu_tree(root_menus, permissions)
+
+    # Build full tree from flat list, then filter by permissions
+    full_tree = build_menu_tree(list(all_menus))
+
+    def _filter_tree(items) -> list[dict]:
+        result = []
+        for item in items:
+            children = _filter_tree(item.children)
+            visible = (
+                item.status == "active"
+                and (not item.permission or item.permission in permissions or bool(children))
+            )
+            if not visible:
+                continue
+            result.append(
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "path": item.path,
+                    "permission": item.permission,
+                    "icon": item.icon,
+                    "component": item.component,
+                    "sort": item.sort,
+                    "status": item.status,
+                    "parentId": item.parentId,
+                    "children": children,
+                }
+            )
+        return result
+
+    menus = _filter_tree(full_tree)
     roles = [{"id": r.id, "name": r.name, "code": r.code} for r in full_user.roles]
     payload = build_current_user_payload(
         user=full_user,

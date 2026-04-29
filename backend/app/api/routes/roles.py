@@ -18,6 +18,7 @@ from app.schemas.role import (
 )
 from app.services.audit import write_operation_log
 from app.services.auth import current_active_user
+from app.services.authorization import require_permission
 from app.services.system_roles import (
     delete_role_or_raise,
     replace_role_permissions,
@@ -41,7 +42,7 @@ async def list_roles(
     name: str | None = None,
     status: str | None = None,
     session: AsyncSession = Depends(get_db_session),
-    _user: User = Depends(current_active_user),
+    _user: User = Depends(require_permission("setting:role")),
 ) -> ListResponse[RoleListItem]:
     q = select(Role)
     if name:
@@ -70,7 +71,7 @@ async def create_role(
     payload: RoleCreateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("role:create")),
 ) -> RoleListItem:
     role = Role(
         name=payload.name,
@@ -79,19 +80,19 @@ async def create_role(
         status=payload.status,
     )
     session.add(role)
-    await session.flush()
-    await write_operation_log(
-        session,
-        operator_id=user.id,
-        operator_name=user.username,
-        module="角色管理",
-        action="创建角色",
-        method="POST",
-        result="成功",
-        detail=f"创建角色 {role.name}",
-        ip=request.client.host if request.client else "",
-    )
     try:
+        await session.flush()
+        await write_operation_log(
+            session,
+            operator_id=user.id,
+            operator_name=user.username,
+            module="角色管理",
+            action="创建角色",
+            method="POST",
+            result="成功",
+            detail=f"创建角色 {role.name}",
+            ip=request.client.host if request.client else "",
+        )
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -114,7 +115,7 @@ async def update_role(
     payload: RoleUpdateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("role:update")),
 ) -> RoleListItem:
     role = await session.get(Role, role_id)
     if role is None:
@@ -124,18 +125,18 @@ async def update_role(
     role.description = payload.description
     role.status = payload.status
     session.add(role)
-    await write_operation_log(
-        session,
-        operator_id=user.id,
-        operator_name=user.username,
-        module="角色管理",
-        action="更新角色",
-        method="PUT",
-        result="成功",
-        detail=f"更新角色 {role.name}",
-        ip=request.client.host if request.client else "",
-    )
     try:
+        await write_operation_log(
+            session,
+            operator_id=user.id,
+            operator_name=user.username,
+            module="角色管理",
+            action="更新角色",
+            method="PUT",
+            result="成功",
+            detail=f"更新角色 {role.name}",
+            ip=request.client.host if request.client else "",
+        )
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -157,7 +158,7 @@ async def delete_role(
     role_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("role:delete")),
 ) -> dict[str, str]:
     role = await session.get(Role, role_id, options=[selectinload(Role.users)])
     if role is None:
@@ -189,7 +190,7 @@ async def update_role_status(
     payload: StatusUpdateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("role:status")),
 ) -> dict[str, str]:
     role = await session.get(Role, role_id)
     if role is None:
@@ -215,7 +216,7 @@ async def update_role_status(
 async def get_role_permissions(
     role_id: int,
     session: AsyncSession = Depends(get_db_session),
-    _user: User = Depends(current_active_user),
+    _user: User = Depends(require_permission("setting:role")),
 ) -> dict[str, list[int]]:
     role = await session.get(Role, role_id, options=[selectinload(Role.permissions)])
     if role is None:
@@ -229,7 +230,7 @@ async def assign_role_permissions(
     payload: RolePermissionAssignRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("role:assign-permission")),
 ) -> dict[str, str]:
     role = await session.get(Role, role_id, options=[selectinload(Role.permissions)])
     if role is None:

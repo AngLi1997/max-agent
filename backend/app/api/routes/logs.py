@@ -11,6 +11,7 @@ from app.models.user import User
 from app.schemas.common import ListResponse
 from app.schemas.log import LoginLogItem, OperationLogItem
 from app.services.auth import current_active_user
+from app.services.authorization import require_permission
 
 router = APIRouter(tags=["logs"])
 
@@ -31,7 +32,7 @@ async def list_operation_logs(
     startTime: str | None = None,
     endTime: str | None = None,
     session: AsyncSession = Depends(get_db_session),
-    _user: User = Depends(current_active_user),
+    _user: User = Depends(require_permission("operation-log:read")),
 ) -> ListResponse[OperationLogItem]:
     q = select(OperationLog)
     if operator:
@@ -75,7 +76,7 @@ async def list_login_logs(
     startTime: str | None = None,
     endTime: str | None = None,
     session: AsyncSession = Depends(get_db_session),
-    _user: User = Depends(current_active_user),
+    _user: User = Depends(require_permission("login-log:read")),
 ) -> ListResponse[LoginLogItem]:
     q = select(LoginLog)
     if username:

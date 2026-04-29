@@ -10,6 +10,7 @@ from app.schemas.common import ListResponse
 from app.schemas.system_config import ConfigCreateRequest, ConfigListItem, ConfigUpdateRequest
 from app.services.audit import write_operation_log
 from app.services.auth import current_active_user
+from app.services.authorization import require_permission
 from app.services.system_configs import update_config_value
 
 router = APIRouter(prefix="/configs", tags=["configs"])
@@ -26,7 +27,7 @@ def _config_integrity_error_message(error: IntegrityError) -> str:
 async def list_configs(
     key: str | None = None,
     session: AsyncSession = Depends(get_db_session),
-    _user: User = Depends(current_active_user),
+    _user: User = Depends(require_permission("setting:config")),
 ) -> ListResponse[ConfigListItem]:
     q = select(SystemConfig)
     if key:
@@ -50,7 +51,7 @@ async def create_config(
     payload: ConfigCreateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("config:create")),
 ) -> ConfigListItem:
     config = SystemConfig(
         name=payload.name,
@@ -59,19 +60,19 @@ async def create_config(
         description=payload.description,
     )
     session.add(config)
-    await session.flush()
-    await write_operation_log(
-        session,
-        operator_id=user.id,
-        operator_name=user.username,
-        module="系统配置",
-        action="创建配置",
-        method="POST",
-        result="成功",
-        detail=f"创建配置 {config.key}",
-        ip=request.client.host if request.client else "",
-    )
     try:
+        await session.flush()
+        await write_operation_log(
+            session,
+            operator_id=user.id,
+            operator_name=user.username,
+            module="系统配置",
+            action="创建配置",
+            method="POST",
+            result="成功",
+            detail=f"创建配置 {config.key}",
+            ip=request.client.host if request.client else "",
+        )
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
@@ -92,7 +93,7 @@ async def update_config(
     payload: ConfigUpdateRequest,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("config:update")),
 ) -> ConfigListItem:
     config = await session.get(SystemConfig, config_id)
     if config is None:
@@ -136,7 +137,7 @@ async def delete_config(
     config_id: int,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_active_user),
+    user: User = Depends(require_permission("config:delete")),
 ) -> dict[str, str]:
     config = await session.get(SystemConfig, config_id)
     if config is None:
