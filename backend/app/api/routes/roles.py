@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -17,9 +18,22 @@ from app.schemas.role import (
 )
 from app.services.audit import write_operation_log
 from app.services.auth import current_active_user
-from app.services.system_roles import delete_role_or_raise, replace_role_permissions
+from app.services.system_roles import (
+    delete_role_or_raise,
+    replace_role_permissions,
+    validate_permission_ids,
+)
 
 router = APIRouter(prefix="/roles", tags=["roles"])
+
+
+def _role_integrity_error_message(error: IntegrityError) -> str:
+    detail = str(error.orig)
+    if "role.name" in detail or "name" in detail:
+        return "角色名称已存在"
+    if "role.code" in detail or "code" in detail:
+        return "角色编码已存在"
+    return "角色数据违反唯一约束"
 
 
 @router.get("/", response_model=ListResponse[RoleListItem])
@@ -77,7 +91,11 @@ async def create_role(
         detail=f"创建角色 {role.name}",
         ip=request.client.host if request.client else "",
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_role_integrity_error_message(exc))
     await session.refresh(role)
     return RoleListItem(
         id=role.id,
@@ -117,7 +135,11 @@ async def update_role(
         detail=f"更新角色 {role.name}",
         ip=request.client.host if request.client else "",
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_role_integrity_error_message(exc))
     await session.refresh(role)
     return RoleListItem(
         id=role.id,
@@ -217,6 +239,10 @@ async def assign_role_permissions(
             select(Permission).where(Permission.id.in_(payload.permissionIds))
         )
     ).all()
+    try:
+        validate_permission_ids(payload.permissionIds, list(permissions))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     replace_role_permissions(role, list(permissions))
     session.add(role)
     await write_operation_log(

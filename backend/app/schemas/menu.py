@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MenuCreateRequest(BaseModel):
@@ -35,4 +35,4 @@ class MenuTreeItem(BaseModel):
     sort: int
     status: str
     parentId: int | None
-    children: list["MenuTreeItem"] = []
+    children: list["MenuTreeItem"] = Field(default_factory=list)

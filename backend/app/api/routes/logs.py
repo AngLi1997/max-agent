@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,8 +20,8 @@ def _parse_datetime(value: str | None) -> datetime | None:
         return None
     try:
         return datetime.fromisoformat(value)
-    except ValueError:
-        return None
+    except ValueError as exc:
+        raise ValueError(f"时间格式无效: {value}") from exc
 
 
 @router.get("/operation-logs", response_model=ListResponse[OperationLogItem])
@@ -39,8 +39,11 @@ async def list_operation_logs(
     if module:
         q = q.where(OperationLog.module.ilike(f"%{module}%"))
 
-    start_dt = _parse_datetime(startTime)
-    end_dt = _parse_datetime(endTime)
+    try:
+        start_dt = _parse_datetime(startTime)
+        end_dt = _parse_datetime(endTime)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     if start_dt and end_dt:
         q = q.where(and_(OperationLog.created_at >= start_dt, OperationLog.created_at <= end_dt))
     elif start_dt:
@@ -80,8 +83,11 @@ async def list_login_logs(
     if result:
         q = q.where(LoginLog.result == result)
 
-    start_dt = _parse_datetime(startTime)
-    end_dt = _parse_datetime(endTime)
+    try:
+        start_dt = _parse_datetime(startTime)
+        end_dt = _parse_datetime(endTime)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     if start_dt and end_dt:
         q = q.where(and_(LoginLog.created_at >= start_dt, LoginLog.created_at <= end_dt))
     elif start_dt:

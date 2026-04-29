@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db_session
@@ -12,6 +13,13 @@ from app.services.auth import current_active_user
 from app.services.system_configs import update_config_value
 
 router = APIRouter(prefix="/configs", tags=["configs"])
+
+
+def _config_integrity_error_message(error: IntegrityError) -> str:
+    detail = str(error.orig)
+    if "system_config.key" in detail or "key" in detail:
+        return "配置键已存在"
+    return "配置数据违反唯一约束"
 
 
 @router.get("/", response_model=ListResponse[ConfigListItem])
@@ -63,7 +71,11 @@ async def create_config(
         detail=f"创建配置 {config.key}",
         ip=request.client.host if request.client else "",
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_config_integrity_error_message(exc))
     await session.refresh(config)
     return ConfigListItem(
         id=config.id,
@@ -104,7 +116,11 @@ async def update_config(
         detail=f"更新配置 {config.key}",
         ip=request.client.host if request.client else "",
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_config_integrity_error_message(exc))
     await session.refresh(config)
     return ConfigListItem(
         id=config.id,

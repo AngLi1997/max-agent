@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db_session
@@ -17,6 +18,13 @@ from app.services.auth import current_active_user
 from app.services.system_permissions import delete_permission_or_raise
 
 router = APIRouter(prefix="/permissions", tags=["permissions"])
+
+
+def _permission_integrity_error_message(error: IntegrityError) -> str:
+    detail = str(error.orig)
+    if "permission.identifier" in detail or "identifier" in detail:
+        return "权限标识已存在"
+    return "权限数据违反唯一约束"
 
 
 @router.get("/", response_model=ListResponse[PermissionListItem])
@@ -72,7 +80,11 @@ async def create_permission(
         detail=f"创建权限 {perm.name}",
         ip=request.client.host if request.client else "",
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_permission_integrity_error_message(exc))
     await session.refresh(perm)
     return PermissionListItem(
         id=perm.id,
@@ -111,7 +123,11 @@ async def update_permission(
         detail=f"更新权限 {perm.name}",
         ip=request.client.host if request.client else "",
     )
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_permission_integrity_error_message(exc))
     await session.refresh(perm)
     return PermissionListItem(
         id=perm.id,
