@@ -44,7 +44,7 @@
           </template>
           <template v-if="column.key === 'action'">
             <a-dropdown>
-              <a-button type="primary" size="small">
+              <a-button type="link" size="small">
                 操作 <DownOutlined />
               </a-button>
               <template #overlay>
@@ -77,12 +77,6 @@
             <a-select-option value="超级管理员">超级管理员</a-select-option>
             <a-select-option value="编辑">编辑</a-select-option>
             <a-select-option value="访客">访客</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="状态">
-          <a-select v-model:value="formState.status">
-            <a-select-option value="active">启用</a-select-option>
-            <a-select-option value="inactive">禁用</a-select-option>
           </a-select>
         </a-form-item>
       </a-form>

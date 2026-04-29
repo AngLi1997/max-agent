@@ -47,7 +47,7 @@
           </template>
           <template v-if="column.key === 'action'">
             <a-dropdown>
-              <a-button type="primary" size="small">
+              <a-button type="link" size="small">
                 操作 <DownOutlined />
               </a-button>
               <template #overlay>
@@ -74,12 +74,6 @@
         </a-form-item>
         <a-form-item label="描述">
           <a-textarea v-model:value="formState.description" placeholder="请输入技能描述" :rows="4" />
-        </a-form-item>
-        <a-form-item label="状态">
-          <a-select v-model:value="formState.status">
-            <a-select-option value="active">启用</a-select-option>
-            <a-select-option value="inactive">禁用</a-select-option>
-          </a-select>
         </a-form-item>
       </a-form>
       <template #footer>

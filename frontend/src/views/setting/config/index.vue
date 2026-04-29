@@ -30,7 +30,7 @@
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'action'">
             <a-dropdown>
-              <a-button type="primary" size="small">
+              <a-button type="link" size="small">
                 操作 <DownOutlined />
               </a-button>
               <template #overlay>

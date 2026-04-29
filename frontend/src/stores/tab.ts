@@ -25,6 +25,7 @@ export const useTabStore = defineStore('tab', () => {
   }
 
   function removeTab(path: string, router: ReturnType<typeof useRouter>) {
+    if (tabs.value.length <= 1) return
     const idx = tabs.value.findIndex(t => t.path === path)
     if (idx === -1) return
     tabs.value.splice(idx, 1)
@@ -52,9 +53,14 @@ export const useTabStore = defineStore('tab', () => {
   }
 
   function closeAll(router: ReturnType<typeof useRouter>) {
-    tabs.value = []
-    activeTab.value = ''
-    router.push('/dashboard')
+    const active = tabs.value.find(t => t.path === activeTab.value)
+    if (active) {
+      tabs.value = [active]
+    } else if (tabs.value.length > 0) {
+      tabs.value = [tabs.value[0]]
+      activeTab.value = tabs.value[0].path
+      router.push(tabs.value[0].path)
+    }
   }
 
   const cachedNames = ref<string[]>([])

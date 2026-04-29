@@ -54,7 +54,7 @@ function handleContextAction(action: string) {
         @contextmenu="onContextMenu($event, tab.path)"
       >
         <span class="tab-title">{{ tab.title }}</span>
-        <span class="tab-close" @click="onClose(tab.path, $event)">&times;</span>
+        <span v-if="tabStore.tabs.length > 1" class="tab-close" @click="onClose(tab.path, $event)">&times;</span>
       </div>
     </div>
     <teleport to="body">
