@@ -33,7 +33,6 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.PrimaryKeyConstraint("id", name="pk_system_config"),
-        sa.UniqueConstraint("key", name="uq_system_config_key"),
     )
     op.create_index("ix_system_config_key", "system_config", ["key"], unique=True)
 

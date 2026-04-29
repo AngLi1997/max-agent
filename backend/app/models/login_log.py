@@ -9,7 +9,11 @@ class LoginLog(TimestampMixin, Base):
     __tablename__ = "login_log"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int | None] = mapped_column(ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
     username: Mapped[str] = mapped_column(String(50), default="", nullable=False)
     ip: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     location: Mapped[str] = mapped_column(String(255), default="", nullable=False)

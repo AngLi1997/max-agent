@@ -9,7 +9,11 @@ class OperationLog(TimestampMixin, Base):
     __tablename__ = "operation_log"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    operator_id: Mapped[int | None] = mapped_column(ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    operator_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
     operator_name: Mapped[str] = mapped_column(String(50), default="", nullable=False)
     module: Mapped[str] = mapped_column(String(100), nullable=False)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
