@@ -135,7 +135,10 @@ async def change_password(
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_db_session),
 ) -> dict[str, str]:
-    change_own_password(user, old_password=payload.oldPassword, new_password=payload.newPassword)
+    try:
+        change_own_password(user, old_password=payload.oldPassword, new_password=payload.newPassword)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     session.add(user)
     await write_operation_log(
         session,
