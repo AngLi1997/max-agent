@@ -60,6 +60,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'SettingLoginLog' })
+
 import { ref, reactive, onMounted } from 'vue'
 import { getLoginLogApi, type LoginLogItem } from '../../../api/log'
 

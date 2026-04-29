@@ -78,6 +78,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'SettingMenu' })
+
 import { ref, reactive, computed, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'

@@ -80,6 +80,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'Skill' })
+
 import { ref, reactive, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'

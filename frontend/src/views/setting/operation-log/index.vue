@@ -67,6 +67,8 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'SettingOperationLog' })
+
 import { ref, reactive, onMounted } from 'vue'
 import { getOperationLogApi, type OperationLogItem } from '../../../api/log'
 
