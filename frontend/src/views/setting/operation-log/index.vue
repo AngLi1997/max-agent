@@ -68,7 +68,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import dayjs, { Dayjs } from 'dayjs'
 import { getOperationLogApi, type OperationLogItem } from '../../../api/log'
 
 const columns = [
@@ -97,7 +96,7 @@ const currentDetail = ref<OperationLogItem | null>(null)
 const searchForm = reactive({
   operator: '',
   module: undefined as string | undefined,
-  timeRange: [] as Dayjs[],
+  timeRange: [] as { format: (template?: string) => string }[],
 })
 
 async function fetchData() {
@@ -107,8 +106,8 @@ async function fetchData() {
     const res = await getOperationLogApi({
       operator: searchForm.operator,
       module: searchForm.module,
-      startTime: start ? dayjs(start).format('YYYY-MM-DD HH:mm:ss') : undefined,
-      endTime: end ? dayjs(end).format('YYYY-MM-DD HH:mm:ss') : undefined,
+      startTime: start ? start.format('YYYY-MM-DD HH:mm:ss') : undefined,
+      endTime: end ? end.format('YYYY-MM-DD HH:mm:ss') : undefined,
     })
     dataSource.value = res.list
     total.value = res.total
