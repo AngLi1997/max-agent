@@ -21,7 +21,7 @@
 
     <a-card title="权限列表">
       <template #extra>
-        <a-button type="primary" @click="handleAdd">
+        <a-button v-if="canCreate" type="primary" @click="handleAdd">
           <template #icon><PlusOutlined /></template>
           新增权限
         </a-button>
@@ -40,6 +40,7 @@
               :checked="record.status === 'active'"
               checked-children="启用"
               un-checked-children="停用"
+              :disabled="!canStatus"
               @change="handleStatusChange(record)"
             />
           </template>
@@ -50,8 +51,8 @@
               </a-button>
               <template #overlay>
                 <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
-                  <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
-                  <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
+                  <a-menu-item v-if="canEdit" key="edit"><EditOutlined /> 编辑</a-menu-item>
+                  <a-menu-item v-if="canDelete" key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -94,10 +95,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingPermission' })
 
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useUserStore } from '@/stores/user'
 import {
   getPermissionListApi,
   createPermissionApi,
@@ -123,6 +125,12 @@ const drawerTitle = ref('新增权限')
 const editingId = ref<number | null>(null)
 const submitLoading = ref(false)
 const { drawerWidth } = useDrawerWidth()
+const userStore = useUserStore()
+
+const canCreate = computed(() => userStore.hasPermission('permission:create'))
+const canEdit = computed(() => userStore.hasPermission('permission:update'))
+const canDelete = computed(() => userStore.hasPermission('permission:delete'))
+const canStatus = computed(() => userStore.hasPermission('permission:status'))
 
 const searchForm = reactive({ name: '', type: undefined as string | undefined })
 const formState = reactive({

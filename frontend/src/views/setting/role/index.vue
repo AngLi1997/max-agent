@@ -159,11 +159,11 @@ const permissionSubmitLoading = ref(false)
 const { drawerWidth } = useDrawerWidth()
 const userStore = useUserStore()
 
-const canCreate = computed(() => userStore.hasPermission('setting:role:create'))
-const canEdit = computed(() => userStore.hasPermission('setting:role:update'))
-const canDelete = computed(() => userStore.hasPermission('setting:role:delete'))
-const canStatus = computed(() => userStore.hasPermission('setting:role:status'))
-const canAssignPermission = computed(() => userStore.hasPermission('setting:role:permission'))
+const canCreate = computed(() => userStore.hasPermission('role:create'))
+const canEdit = computed(() => userStore.hasPermission('role:update'))
+const canDelete = computed(() => userStore.hasPermission('role:delete'))
+const canStatus = computed(() => userStore.hasPermission('role:status'))
+const canAssignPermission = computed(() => userStore.hasPermission('role:assign-permission'))
 
 const searchForm = reactive({ name: '', status: undefined as string | undefined })
 const formState = reactive({
@@ -296,7 +296,8 @@ async function handlePermissionOk() {
   }
   permissionSubmitLoading.value = true
   try {
-    await updateRolePermissionsApi(permissionRoleId.value, checkedPermissions.value)
+    const permissionIds = checkedPermissions.value.filter((id) => Number.isInteger(id) && id > 0)
+    await updateRolePermissionsApi(permissionRoleId.value, permissionIds)
     message.success('权限分配成功')
     permissionModalVisible.value = false
   } finally {

@@ -8,9 +8,9 @@
         <a-form-item label="模块">
           <a-select v-model:value="searchForm.module" placeholder="请选择模块" allow-clear style="width: 180px">
             <a-select-option value="用户管理">用户管理</a-select-option>
-            <a-select-option value="模型管理">模型管理</a-select-option>
             <a-select-option value="角色管理">角色管理</a-select-option>
-            <a-select-option value="工具管理">工具管理</a-select-option>
+            <a-select-option value="权限管理">权限管理</a-select-option>
+            <a-select-option value="菜单管理">菜单管理</a-select-option>
             <a-select-option value="系统配置">系统配置</a-select-option>
           </a-select>
         </a-form-item>
@@ -47,7 +47,7 @@
               </a-button>
               <template #overlay>
                 <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
-                  <a-menu-item key="detail"><EyeOutlined /> 查看详情</a-menu-item>
+                  <a-menu-item v-if="canRead" key="detail"><EyeOutlined /> 查看详情</a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -77,9 +77,10 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingOperationLog' })
 
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { EyeOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useUserStore } from '@/stores/user'
 import { getOperationLogApi, type OperationLogItem } from '../../../api/log'
 
 const columns = [
@@ -96,6 +97,7 @@ const methodColorMap: Record<string, string> = {
   GET: 'blue',
   POST: 'green',
   PUT: 'orange',
+  PATCH: 'purple',
   DELETE: 'red',
 }
 
@@ -105,6 +107,8 @@ const total = ref(0)
 const detailVisible = ref(false)
 const currentDetail = ref<OperationLogItem | null>(null)
 const { drawerWidth } = useDrawerWidth()
+const userStore = useUserStore()
+const canRead = computed(() => userStore.hasPermission('operation-log:read'))
 
 const searchForm = reactive({
   operator: '',

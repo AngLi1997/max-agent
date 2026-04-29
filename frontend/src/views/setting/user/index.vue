@@ -114,10 +114,10 @@ import { getRoleListApi } from '@/api/role'
 const { drawerWidth } = useDrawerWidth()
 const userStore = useUserStore()
 
-const canCreate = computed(() => userStore.hasPermission('setting:user:create'))
-const canEdit = computed(() => userStore.hasPermission('setting:user:update'))
-const canDelete = computed(() => userStore.hasPermission('setting:user:delete'))
-const canStatus = computed(() => userStore.hasPermission('setting:user:status'))
+const canCreate = computed(() => userStore.hasPermission('user:create'))
+const canEdit = computed(() => userStore.hasPermission('user:update'))
+const canDelete = computed(() => userStore.hasPermission('user:delete'))
+const canStatus = computed(() => userStore.hasPermission('user:status'))
 
 const columns = [
   { title: '用户名', dataIndex: 'username', key: 'username' },

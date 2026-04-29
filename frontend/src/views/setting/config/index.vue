@@ -14,7 +14,7 @@
 
     <a-card title="配置列表">
       <template #extra>
-        <a-button type="primary" @click="handleAdd">
+        <a-button v-if="canCreate" type="primary" @click="handleAdd">
           <template #icon><PlusOutlined /></template>
           新增配置
         </a-button>
@@ -35,8 +35,8 @@
               </a-button>
               <template #overlay>
                 <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
-                  <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
-                  <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
+                  <a-menu-item v-if="canEdit" key="edit"><EditOutlined /> 编辑</a-menu-item>
+                  <a-menu-item v-if="canDelete" key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -78,10 +78,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingConfig' })
 
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useUserStore } from '@/stores/user'
 import {
   getConfigListApi,
   createConfigApi,
@@ -106,6 +107,11 @@ const drawerTitle = ref('新增配置')
 const editingId = ref<number | null>(null)
 const submitLoading = ref(false)
 const { drawerWidth } = useDrawerWidth()
+const userStore = useUserStore()
+
+const canCreate = computed(() => userStore.hasPermission('config:create'))
+const canEdit = computed(() => userStore.hasPermission('config:update'))
+const canDelete = computed(() => userStore.hasPermission('config:delete'))
 
 const searchForm = reactive({ key: '' })
 const formState = reactive({ name: '', key: '', value: '', description: '' })
