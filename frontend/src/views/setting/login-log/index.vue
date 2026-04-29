@@ -136,5 +136,7 @@ function handleViewDetail(record: LoginLogItem) {
   detailVisible.value = true
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  if (canRead.value) fetchData()
+})
 </script>

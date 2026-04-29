@@ -51,7 +51,10 @@ router.beforeEach((to) => {
   if (userStore.token && to.path === '/login') {
     return userStore.menus?.[0]?.path || '/dashboard'
   }
-  if (to.path.startsWith('/setting') && userStore.menus.length > 0) {
+  if (to.path.startsWith('/setting') && userStore.token) {
+    if (userStore.menus.length === 0) {
+      return '/dashboard'
+    }
     const visiblePaths = new Set<string>()
     const walk = (items: typeof userStore.menus) => {
       for (const item of items) {
