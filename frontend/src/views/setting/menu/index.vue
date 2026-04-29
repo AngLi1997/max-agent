@@ -71,6 +71,12 @@
         <a-form-item label="权限标识">
           <a-input v-model:value="formState.permission" placeholder="请输入权限标识" />
         </a-form-item>
+        <a-form-item label="图标">
+          <a-input v-model:value="formState.icon" placeholder="请输入图标名" />
+        </a-form-item>
+        <a-form-item label="组件路径">
+          <a-input v-model:value="formState.component" placeholder="请输入组件路径" />
+        </a-form-item>
         <a-form-item label="排序" required>
           <a-input-number v-model:value="formState.sort" :min="1" style="width: 100%" />
         </a-form-item>
@@ -91,7 +97,7 @@ defineOptions({ name: 'SettingMenu' })
 import { ref, reactive, computed, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
-import { getMenuTreeApi, createMenuApi, updateMenuApi, deleteMenuApi, type MenuItem } from '../../../api/menu'
+import { getMenuTreeApi, createMenuApi, updateMenuApi, deleteMenuApi, updateMenuStatusApi, type MenuItem } from '../../../api/menu'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
 
 const { drawerWidth } = useDrawerWidth()
@@ -117,6 +123,8 @@ const formState = reactive({
   parentId: null as number | null,
   path: '',
   permission: '',
+  icon: '',
+  component: '',
   sort: 1,
   status: '' as 'active' | 'inactive' | '',
 })
@@ -137,6 +145,8 @@ function resetForm() {
   formState.parentId = null
   formState.path = ''
   formState.permission = ''
+  formState.icon = ''
+  formState.component = ''
   formState.sort = 1
   formState.status = ''
 }
@@ -163,6 +173,8 @@ function handleEdit(record: MenuItem) {
   formState.parentId = record.parentId
   formState.path = record.path
   formState.permission = record.permission
+  formState.icon = record.icon
+  formState.component = record.component
   formState.sort = record.sort
   formState.status = record.status
   drawerVisible.value = true
@@ -184,7 +196,7 @@ function handleDelete(record: MenuItem) {
 async function handleStatusChange(record: MenuItem) {
   const newStatus = record.status === 'active' ? 'inactive' : 'active'
   try {
-    await updateMenuApi(record.id, { ...record, status: newStatus })
+    await updateMenuStatusApi(record.id, newStatus)
     message.success('状态更新成功')
     await fetchData()
   } catch {
@@ -219,6 +231,8 @@ async function handleSubmit() {
       parentId: formState.parentId,
       path: formState.path,
       permission: formState.permission,
+      icon: formState.icon,
+      component: formState.component,
       sort: formState.sort,
       status,
     }

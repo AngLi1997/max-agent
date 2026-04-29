@@ -103,6 +103,7 @@ import {
   createPermissionApi,
   updatePermissionApi,
   deletePermissionApi,
+  updatePermissionStatusApi,
   type PermissionItem,
 } from '../../../api/permission'
 
@@ -185,12 +186,7 @@ function handleMenuClick(key: string, record: PermissionItem) {
 async function handleStatusChange(record: PermissionItem) {
   const newStatus = record.status === 'active' ? 'inactive' : 'active'
   try {
-    await updatePermissionApi(record.id, {
-      name: record.name,
-      identifier: record.identifier,
-      type: record.type,
-      status: newStatus,
-    })
+    await updatePermissionStatusApi(record.id, newStatus)
     message.success('状态更新成功')
     await fetchData()
   } catch {

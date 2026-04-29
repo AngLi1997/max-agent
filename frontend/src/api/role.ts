@@ -1,76 +1,39 @@
+import request from './request'
+
 export interface RoleItem {
   id: number
   name: string
   code: string
   description: string
   status: 'active' | 'inactive'
+  isBuiltin: boolean
   createdAt: string
 }
 
-export interface RoleListParams {
-  name?: string
-  status?: string
+export function getRoleListApi(params: { name?: string; status?: string }) {
+  return request.get('/roles', { params }) as Promise<{ list: RoleItem[]; total: number }>
 }
 
-export interface RoleListResult {
-  list: RoleItem[]
-  total: number
+export function createRoleApi(data: { name: string; code: string; description: string; status: string }) {
+  return request.post('/roles', data) as Promise<RoleItem>
 }
 
-const mockData: RoleItem[] = [
-  { id: 1, name: '超级管理员', code: 'admin', description: '拥有所有权限', status: 'active', createdAt: '2024-01-01 10:00:00' },
-  { id: 2, name: '编辑', code: 'editor', description: '可编辑内容', status: 'active', createdAt: '2024-02-01 10:00:00' },
-  { id: 3, name: '访客', code: 'viewer', description: '只读权限', status: 'inactive', createdAt: '2024-03-01 10:00:00' },
-]
-let nextId = 4
-
-export function getRoleListApi(params: RoleListParams): Promise<RoleListResult> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      let list = [...mockData]
-      if (params.name) {
-        list = list.filter((item) => item.name.includes(params.name!))
-      }
-      if (params.status) {
-        list = list.filter((item) => item.status === params.status)
-      }
-      resolve({ list, total: list.length })
-    }, 300)
-  })
+export function updateRoleApi(id: number, data: { name: string; code: string; description: string; status: string }) {
+  return request.put(`/roles/${id}`, data) as Promise<RoleItem>
 }
 
-export function createRoleApi(data: Omit<RoleItem, 'id' | 'createdAt'>): Promise<RoleItem> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const item: RoleItem = {
-        ...data,
-        id: nextId++,
-        createdAt: new Date().toLocaleString('zh-CN').replace(/\//g, '-'),
-      }
-      mockData.push(item)
-      resolve(item)
-    }, 300)
-  })
+export function deleteRoleApi(id: number) {
+  return request.delete(`/roles/${id}`) as Promise<{ message: string }>
 }
 
-export function updateRoleApi(id: number, data: Omit<RoleItem, 'id' | 'createdAt'>): Promise<RoleItem> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const index = mockData.findIndex((item) => item.id === id)
-      if (index === -1) { reject(new Error('角色不存在')); return }
-      mockData[index] = { ...mockData[index], ...data }
-      resolve(mockData[index])
-    }, 300)
-  })
+export function updateRoleStatusApi(id: number, status: string) {
+  return request.patch(`/roles/${id}/status`, { status }) as Promise<{ message: string }>
 }
 
-export function deleteRoleApi(id: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const index = mockData.findIndex((item) => item.id === id)
-      if (index === -1) { reject(new Error('角色不存在')); return }
-      mockData.splice(index, 1)
-      resolve()
-    }, 300)
-  })
+export function getRolePermissionsApi(id: number) {
+  return request.get(`/roles/${id}/permissions`) as Promise<{ permissionIds: number[] }>
+}
+
+export function updateRolePermissionsApi(id: number, permissionIds: number[]) {
+  return request.put(`/roles/${id}/permissions`, { permissionIds }) as Promise<{ message: string }>
 }

@@ -55,3 +55,39 @@ export function logoutApi(): Promise<{ message: string }> {
 export function changePasswordApi(params: { oldPassword: string; newPassword: string }): Promise<{ message: string }> {
   return request.post('/auth/change-password', params) as Promise<{ message: string }>
 }
+
+export interface UserListItem {
+  id: number
+  username: string
+  email: string
+  roles: RoleSummary[]
+  roleIds: number[]
+  status: 'active' | 'inactive'
+  createdAt: string
+  isBuiltin: boolean
+}
+
+export interface CreateUserResponse {
+  user: UserListItem
+  temporaryPassword: string
+}
+
+export function getUserListApi(params: { username?: string; status?: string }) {
+  return request.get('/users', { params }) as Promise<{ list: UserListItem[]; total: number }>
+}
+
+export function createUserApi(data: { username: string; email: string; roleIds: number[]; status: string }) {
+  return request.post('/users', data) as Promise<CreateUserResponse>
+}
+
+export function updateUserApi(id: number, data: { username: string; email: string; roleIds: number[]; status: string }) {
+  return request.put(`/users/${id}`, data) as Promise<UserListItem>
+}
+
+export function deleteUserApi(id: number) {
+  return request.delete(`/users/${id}`) as Promise<{ message: string }>
+}
+
+export function updateUserStatusApi(id: number, status: string) {
+  return request.patch(`/users/${id}/status`, { status }) as Promise<{ message: string }>
+}

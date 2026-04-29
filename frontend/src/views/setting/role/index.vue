@@ -20,7 +20,7 @@
 
     <a-card title="角色列表">
       <template #extra>
-        <a-button type="primary" @click="handleAdd">
+        <a-button v-if="canCreate" type="primary" @click="handleAdd">
           <template #icon><PlusOutlined /></template>
           新增角色
         </a-button>
@@ -39,6 +39,7 @@
               :checked="record.status === 'active'"
               checked-children="启用"
               un-checked-children="停用"
+              :disabled="!canStatus"
               @change="handleStatusChange(record)"
             />
           </template>
@@ -49,9 +50,9 @@
               </a-button>
               <template #overlay>
                 <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
-                  <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
-                  <a-menu-item key="permission"><SafetyOutlined /> 分配权限</a-menu-item>
-                  <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
+                  <a-menu-item v-if="canEdit" key="edit"><EditOutlined /> 编辑</a-menu-item>
+                  <a-menu-item v-if="canAssignPermission" key="permission"><SafetyOutlined /> 分配权限</a-menu-item>
+                  <a-menu-item v-if="canDelete && !record.isBuiltin" key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -100,7 +101,7 @@
       <template #footer>
         <div style="text-align: right;">
           <a-button style="margin-right: 8px;" @click="permissionModalVisible = false">取消</a-button>
-          <a-button type="primary" @click="handlePermissionOk">确定</a-button>
+          <a-button type="primary" :loading="permissionSubmitLoading" @click="handlePermissionOk">确定</a-button>
         </div>
       </template>
     </a-drawer>
@@ -110,66 +111,35 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingRole' })
 
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useUserStore } from '@/stores/user'
 import {
   getRoleListApi,
   createRoleApi,
   updateRoleApi,
   deleteRoleApi,
+  updateRoleStatusApi,
+  getRolePermissionsApi,
+  updateRolePermissionsApi,
   type RoleItem,
-} from '../../../api/role'
+} from '@/api/role'
+import { getPermissionListApi } from '@/api/permission'
 
-const permissionTree = [
-  { title: '仪表盘', key: 'dashboard' },
-  {
-    title: '模型管理', key: 'model',
-    children: [
-      { title: '查看', key: 'model:read' },
-      { title: '新增', key: 'model:create' },
-      { title: '编辑', key: 'model:update' },
-      { title: '删除', key: 'model:delete' },
-    ],
-  },
-  {
-    title: 'Skills管理', key: 'skill',
-    children: [
-      { title: '查看', key: 'skill:read' },
-      { title: '新增', key: 'skill:create' },
-      { title: '编辑', key: 'skill:update' },
-      { title: '删除', key: 'skill:delete' },
-    ],
-  },
-  {
-    title: '工具管理', key: 'tool',
-    children: [
-      { title: '查看', key: 'tool:read' },
-      { title: '新增', key: 'tool:create' },
-      { title: '编辑', key: 'tool:update' },
-      { title: '删除', key: 'tool:delete' },
-    ],
-  },
-  {
-    title: '系统设置', key: 'setting',
-    children: [
-      { title: '用户管理', key: 'setting:user' },
-      { title: '角色管理', key: 'setting:role' },
-      { title: '权限管理', key: 'setting:permission' },
-      { title: '菜单配置', key: 'setting:menu' },
-      { title: '系统配置', key: 'setting:config' },
-      { title: '操作日志', key: 'setting:operation-log' },
-      { title: '登录日志', key: 'setting:login-log' },
-    ],
-  },
-]
+interface PermissionTreeNode {
+  title: string
+  key: number
+  children?: PermissionTreeNode[]
+}
 
 const columns = [
   { title: '角色名称', dataIndex: 'name', key: 'name' },
   { title: '角色编码', dataIndex: 'code', key: 'code' },
   { title: '描述', dataIndex: 'description', key: 'description' },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
+  { title: '内置角色', dataIndex: 'isBuiltin', key: 'isBuiltin', width: 100, align: 'center' as const },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
@@ -182,8 +152,18 @@ const editingId = ref<number | null>(null)
 const submitLoading = ref(false)
 const permissionModalVisible = ref(false)
 const permissionRoleName = ref('')
-const checkedPermissions = ref<string[]>([])
+const permissionRoleId = ref<number | null>(null)
+const checkedPermissions = ref<number[]>([])
+const permissionTree = ref<PermissionTreeNode[]>([])
+const permissionSubmitLoading = ref(false)
 const { drawerWidth } = useDrawerWidth()
+const userStore = useUserStore()
+
+const canCreate = computed(() => userStore.hasPermission('setting:role:create'))
+const canEdit = computed(() => userStore.hasPermission('setting:role:update'))
+const canDelete = computed(() => userStore.hasPermission('setting:role:delete'))
+const canStatus = computed(() => userStore.hasPermission('setting:role:status'))
+const canAssignPermission = computed(() => userStore.hasPermission('setting:role:permission'))
 
 const searchForm = reactive({ name: '', status: undefined as string | undefined })
 const formState = reactive({
@@ -192,6 +172,24 @@ const formState = reactive({
   description: '',
   status: undefined as 'active' | 'inactive' | undefined,
 })
+
+function buildPermissionTree() {
+  const groups = new Map<string, PermissionTreeNode>()
+  for (const permission of permissionTree.value.flatMap((node) => node.children ?? [])) {
+    const prefix = String(permission.title).split(':')[0] || '其他'
+    if (!groups.has(prefix)) {
+      groups.set(prefix, { title: prefix, key: -Math.floor(Math.random() * 1_000_000), children: [] })
+    }
+    groups.get(prefix)!.children!.push(permission)
+  }
+  permissionTree.value = Array.from(groups.values())
+}
+
+async function loadPermissionTree() {
+  const res = await getPermissionListApi({})
+  permissionTree.value = [{ title: '权限列表', key: 0, children: res.list.map((item) => ({ title: `${item.name} (${item.identifier})`, key: item.id })) }]
+  buildPermissionTree()
+}
 
 async function fetchData() {
   loading.value = true
@@ -264,12 +262,7 @@ function handleMenuClick(key: string, record: RoleItem) {
 async function handleStatusChange(record: RoleItem) {
   const newStatus = record.status === 'active' ? 'inactive' : 'active'
   try {
-    await updateRoleApi(record.id, {
-      name: record.name,
-      code: record.code,
-      description: record.description,
-      status: newStatus,
-    })
+    await updateRoleStatusApi(record.id, newStatus)
     message.success('状态更新成功')
     await fetchData()
   } catch {
@@ -277,15 +270,38 @@ async function handleStatusChange(record: RoleItem) {
   }
 }
 
-function handleAssignPermission(record: RoleItem) {
+async function handleAssignPermission(record: RoleItem) {
   permissionRoleName.value = record.name
-  checkedPermissions.value = []
+  permissionRoleId.value = record.id
+  const [permissionRes, rolePermissionRes] = await Promise.all([
+    getPermissionListApi({}),
+    getRolePermissionsApi(record.id),
+  ])
+  const grouped = new Map<string, PermissionTreeNode>()
+  for (const item of permissionRes.list) {
+    const prefix = item.identifier.split(':')[0] || '其他'
+    if (!grouped.has(prefix)) {
+      grouped.set(prefix, { title: prefix, key: -item.id - 100000, children: [] })
+    }
+    grouped.get(prefix)!.children!.push({ title: `${item.name} (${item.identifier})`, key: item.id })
+  }
+  permissionTree.value = Array.from(grouped.values())
+  checkedPermissions.value = rolePermissionRes.permissionIds
   permissionModalVisible.value = true
 }
 
-function handlePermissionOk() {
-  message.success('权限分配成功')
-  permissionModalVisible.value = false
+async function handlePermissionOk() {
+  if (permissionRoleId.value === null) {
+    return
+  }
+  permissionSubmitLoading.value = true
+  try {
+    await updateRolePermissionsApi(permissionRoleId.value, checkedPermissions.value)
+    message.success('权限分配成功')
+    permissionModalVisible.value = false
+  } finally {
+    permissionSubmitLoading.value = false
+  }
 }
 
 async function handleSubmit() {
@@ -311,5 +327,7 @@ async function handleSubmit() {
   }
 }
 
-onMounted(fetchData)
+onMounted(async () => {
+  await Promise.all([fetchData(), loadPermissionTree()])
+})
 </script>
