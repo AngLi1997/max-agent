@@ -49,7 +49,20 @@ router.beforeEach((to) => {
     return '/login'
   }
   if (userStore.token && to.path === '/login') {
-    return '/dashboard'
+    return userStore.menus?.[0]?.path || '/dashboard'
+  }
+  if (to.path.startsWith('/setting') && userStore.menus.length > 0) {
+    const visiblePaths = new Set<string>()
+    const walk = (items: typeof userStore.menus) => {
+      for (const item of items) {
+        visiblePaths.add(item.path)
+        if (item.children) walk(item.children)
+      }
+    }
+    walk(userStore.menus)
+    if (!visiblePaths.has(to.path)) {
+      return userStore.menus[0]?.path || '/dashboard'
+    }
   }
 })
 
