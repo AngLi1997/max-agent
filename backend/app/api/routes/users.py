@@ -43,11 +43,16 @@ def _build_user_item(user: User) -> UserListItem:
 
 
 async def _load_roles_or_400(session: AsyncSession, role_ids: list[int]) -> list[Role]:
+    if not role_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="角色列表不能为空")
     if len(set(role_ids)) != len(role_ids):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="角色ID不允许重复")
     roles = (await session.scalars(select(Role).where(Role.id.in_(role_ids)))).all()
     if len(roles) != len(role_ids):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="存在无效的角色ID")
+    inactive_roles = [role.name for role in roles if role.status != "active"]
+    if inactive_roles:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="角色包含已禁用项")
     return list(roles)
 
 
@@ -133,18 +138,19 @@ async def update_user(
     target.roles = roles
     session.add(target)
 
-    await write_operation_log(
-        session,
-        operator_id=user.id,
-        operator_name=user.username,
-        module="用户管理",
-        action="更新用户",
-        method="PUT",
-        result="成功",
-        detail=f"更新用户 {target.username}",
-        ip=request.client.host if request.client else "",
-    )
     try:
+        await session.flush()
+        await write_operation_log(
+            session,
+            operator_id=user.id,
+            operator_name=user.username,
+            module="用户管理",
+            action="更新用户",
+            method="PUT",
+            result="成功",
+            detail=f"更新用户 {target.username}",
+            ip=request.client.host if request.client else "",
+        )
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()

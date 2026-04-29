@@ -1,4 +1,8 @@
+import pytest
+from pydantic import ValidationError
+
 from app.models import LoginLog, Menu, OperationLog, Role, SystemConfig, User
+from app.schemas.user import UserCreateRequest, UserUpdateRequest
 
 
 def test_user_model_has_status_builtin_and_password_reset_flags() -> None:
@@ -62,3 +66,11 @@ def test_new_required_columns_remain_non_nullable() -> None:
     assert operation_log_columns.result.nullable is False
 
     assert login_log_columns.result.nullable is False
+
+
+def test_user_schema_status_only_accepts_active_or_inactive() -> None:
+    with pytest.raises(ValidationError):
+        UserCreateRequest(username="u1", email="u1@example.com", roleIds=[1], status="disabled")
+
+    with pytest.raises(ValidationError):
+        UserUpdateRequest(username="u2", email="u2@example.com", roleIds=[1], status="disabled")

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, EmailStr
 
 
@@ -35,14 +37,14 @@ class UserCreateRequest(BaseModel):
     username: str
     email: EmailStr
     roleIds: list[int]
-    status: str = "active"
+    status: Literal["active", "inactive"] = "active"
 
 
 class UserUpdateRequest(BaseModel):
     username: str
     email: EmailStr
     roleIds: list[int]
-    status: str = "active"
+    status: Literal["active", "inactive"] = "active"
 
 
 class UserListItem(BaseModel):
