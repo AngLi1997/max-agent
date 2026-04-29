@@ -146,6 +146,45 @@ async def test_update_user_maps_integrity_error_during_log_flush_to_http_409_and
 
 
 @pytest.mark.asyncio
+async def test_update_user_maps_integrity_error_during_flush_to_http_409_and_rolls_back(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = User(
+        id=10,
+        username="editor",
+        email="editor@example.com",
+        hashed_password="x",
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+        avatar="",
+        status="active",
+    )
+    active_role = Role(id=1, name="编辑", code="editor", status="active")
+    session = DummyUserUpdateSession(target=target, roles=[active_role])
+    session.flush = AsyncMock(side_effect=IntegrityError("stmt", "params", Exception("dup")))
+    monkeypatch.setattr(users_routes, "write_operation_log", AsyncMock())
+
+    with pytest.raises(HTTPException) as exc:
+        await users_routes.update_user(
+            user_id=10,
+            payload=UserUpdateRequest(
+                username="editor2",
+                email="editor2@example.com",
+                roleIds=[1],
+                status="active",
+            ),
+            request=SimpleNamespace(client=SimpleNamespace(host="127.0.0.1")),
+            session=session,
+            user=SimpleNamespace(id=1, username="tester"),
+        )
+
+    assert exc.value.status_code == 409
+    session.rollback.assert_awaited_once()
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_update_user_rejects_empty_role_ids_with_http_400() -> None:
     target = User(
         id=10,
