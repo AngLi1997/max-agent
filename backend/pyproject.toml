@@ -16,3 +16,11 @@ dependencies = [
     "redis[hiredis]>=6.4.0",
     "sqlalchemy>=2.0.43",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",
+    "aiosqlite>=0.20.0",
+]

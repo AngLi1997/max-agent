@@ -11,6 +11,7 @@ class Menu(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     path: Mapped[str] = mapped_column(String(255), nullable=False)
+    component: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     permission: Mapped[str] = mapped_column(String(100), default="", nullable=False)
     icon: Mapped[str] = mapped_column(String(100), default="", nullable=False)
     sort: Mapped[int] = mapped_column(default=1, nullable=False)
