@@ -46,7 +46,7 @@
           <template v-if="column.key === 'action'">
             <a-dropdown>
               <a-button type="link" size="small">
-                操作 <DownOutlined />
+                操作
               </a-button>
               <template #overlay>
                 <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
