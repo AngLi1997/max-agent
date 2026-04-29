@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import { useUserStore } from '@/stores/user'
 import { useTabStore } from '@/stores/tab'
+import { logoutApi } from '@/api/user'
 import TabBar from '@/components/TabBar.vue'
 import {
   DashboardOutlined,
@@ -40,9 +41,15 @@ function handleMenuClick({ key }: { key: string }) {
   router.push(key)
 }
 
-function handleLogout() {
-  userStore.clearToken()
-  router.push('/login')
+async function handleLogout() {
+  try {
+    if (userStore.token) {
+      await logoutApi()
+    }
+  } finally {
+    userStore.clearToken()
+    router.push('/login')
+  }
 }
 </script>
 

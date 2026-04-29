@@ -90,7 +90,7 @@ defineOptions({ name: 'SettingMenu' })
 
 import { ref, reactive, computed, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { PlusOutlined, DownOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { getMenuTreeApi, createMenuApi, updateMenuApi, deleteMenuApi, type MenuItem } from '../../../api/menu'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
 

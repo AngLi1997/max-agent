@@ -2,7 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
-import { loginApi } from '../../api/user'
+import { getUserInfoApi, loginApi } from '../../api/user'
 import { UserOutlined, LockOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 
@@ -24,11 +24,12 @@ async function handleLogin() {
       password: formState.password,
     })
     userStore.setToken(result.token)
-    userStore.setUserInfo({ username: result.username, avatar: '' })
+    const userInfo = await getUserInfoApi()
+    userStore.setUserInfo(userInfo)
     message.success('登录成功')
     router.push('/dashboard')
   } catch (e: any) {
-    message.error(e.message || '登录失败')
+    message.error(e.response?.data?.detail || e.message || '登录失败')
   } finally {
     loading.value = false
   }

@@ -1,9 +1,17 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+interface UserInfo {
+  id: number
+  username: string
+  email: string
+  avatar: string
+  role: string
+}
+
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('token') || '')
-  const userInfo = ref<{ username: string; avatar: string } | null>(null)
+  const userInfo = ref<UserInfo | null>(null)
 
   function setToken(t: string) {
     token.value = t
@@ -16,7 +24,7 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('token')
   }
 
-  function setUserInfo(info: { username: string; avatar: string }) {
+  function setUserInfo(info: UserInfo) {
     userInfo.value = info
   }
 

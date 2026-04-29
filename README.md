@@ -75,6 +75,21 @@ max-agent 是一个智能体管理平台，面向智能体对话、配置管理�
 
 ## 开发命令
 
+### 基础设施
+
+```bash
+docker compose up -d
+```
+
+- `docker compose up -d`: 启动 PostgreSQL (pgvector)、Redis、MinIO 基础设施服务
+- `docker compose down`: 停止所有基础设施服务
+- `docker compose ps`: 查看服务运行状态
+
+服务端口：
+- PostgreSQL: 5432
+- Redis: 6379
+- MinIO API: 9000 / 控制台: 9001
+
 ### 后端
 
 ```bash

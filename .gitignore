@@ -43,6 +43,9 @@ pnpm-debug.log*
 .idea/
 .vscode/
 
+# Docker data
+docker-data/
+
 # Superpowers
 .superpowers/
 .worktrees/

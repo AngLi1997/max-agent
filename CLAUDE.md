@@ -13,6 +13,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 常用命令
 
+### 基础设施 (Docker Compose)
+
+```bash
+docker compose up -d
+docker compose down
+docker compose ps
+```
+
+- 启动基础设施: `docker compose up -d`（PostgreSQL + pgvector、Redis、MinIO）
+- 停止基础设施: `docker compose down`
+- 查看服务状态: `docker compose ps`
+
+服务端口：PostgreSQL 5432、Redis 6379、MinIO API 9000 / 控制台 9001。
+
 ### Backend (`/backend`)
 
 ```bash

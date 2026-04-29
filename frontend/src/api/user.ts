@@ -1,3 +1,5 @@
+import request from './request'
+
 export interface LoginParams {
   username: string
   password: string
@@ -9,26 +11,21 @@ export interface LoginResult {
 }
 
 export function loginApi(params: LoginParams): Promise<LoginResult> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (params.username === 'admin' && params.password === 'admin123') {
-        resolve({ token: 'mock-token-' + Date.now(), username: params.username })
-      } else {
-        reject(new Error('用户名或密码错误'))
-      }
-    }, 500)
-  })
+  return request.post('/auth/login', params) as Promise<LoginResult>
 }
 
 export interface UserInfo {
+  id: number
   username: string
+  email: string
   avatar: string
+  role: string
 }
 
 export function getUserInfoApi(): Promise<UserInfo> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ username: 'admin', avatar: '' })
-    }, 200)
-  })
+  return request.get('/auth/me') as Promise<UserInfo>
+}
+
+export function logoutApi(): Promise<{ message: string }> {
+  return request.post('/auth/logout') as Promise<{ message: string }>
 }

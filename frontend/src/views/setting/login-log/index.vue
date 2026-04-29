@@ -71,7 +71,7 @@
 defineOptions({ name: 'SettingLoginLog' })
 
 import { ref, reactive, onMounted } from 'vue'
-import { DownOutlined, EyeOutlined } from '@ant-design/icons-vue'
+import { EyeOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
 import { getLoginLogApi, type LoginLogItem } from '../../../api/log'
 
