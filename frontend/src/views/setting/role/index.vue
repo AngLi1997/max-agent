@@ -48,7 +48,7 @@
                 操作 <DownOutlined />
               </a-button>
               <template #overlay>
-                <a-menu @click="handleActionMenuClick($event, record)">
+                <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
                   <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
                   <a-menu-item key="permission"><SafetyOutlined /> 分配权限</a-menu-item>
                   <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
@@ -76,7 +76,7 @@
         <a-form-item label="描述">
           <a-input v-model:value="formState.description" placeholder="请输入描述" />
         </a-form-item>
-        <a-form-item label="状态" required>
+        <a-form-item label="状态">
           <a-select v-model:value="formState.status">
             <a-select-option value="active">启用</a-select-option>
             <a-select-option value="inactive">禁用</a-select-option>
@@ -245,8 +245,8 @@ function handleDelete(record: RoleItem) {
   })
 }
 
-function handleActionMenuClick(info: { key: string | number }, record: RoleItem) {
-  handleMenuClick(String(info.key), record)
+function handleActionMenuClick({ key }: { key: string }, record: RoleItem) {
+  handleMenuClick(key, record)
 }
 
 function handleMenuClick(key: string, record: RoleItem) {
@@ -272,8 +272,8 @@ async function handleStatusChange(record: RoleItem) {
       description: record.description,
       status: newStatus,
     })
-    record.status = newStatus
     message.success('状态更新成功')
+    await fetchData()
   } catch {
     message.error('状态更新失败')
   }

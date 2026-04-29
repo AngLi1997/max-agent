@@ -48,7 +48,7 @@
                 操作 <DownOutlined />
               </a-button>
               <template #overlay>
-                <a-menu @click="({ key: k }: { key: string }) => handleMenuClick(k, record)">
+                <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
                   <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
                   <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
                 </a-menu>
@@ -79,7 +79,7 @@
             <a-select-option value="访客">访客</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="状态" required>
+        <a-form-item label="状态">
           <a-select v-model:value="formState.status">
             <a-select-option value="active">启用</a-select-option>
             <a-select-option value="inactive">禁用</a-select-option>
@@ -203,6 +203,10 @@ function handleDelete(record: UserItem) {
   })
 }
 
+function handleActionMenuClick({ key }: { key: string }, record: UserItem) {
+  handleMenuClick(key, record)
+}
+
 function handleMenuClick(key: string, record: UserItem) {
   switch (key) {
     case 'edit': handleEdit(record); break
@@ -218,6 +222,7 @@ function handleStatusChange(record: UserItem) {
     record.status = newStatus
   }
   message.success('状态更新成功')
+  fetchData()
 }
 
 function handleSubmit() {

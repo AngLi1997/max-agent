@@ -49,7 +49,7 @@
                 操作 <DownOutlined />
               </a-button>
               <template #overlay>
-                <a-menu @click="({ key: k }: { key: string }) => handleMenuClick(k, record)">
+                <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
                   <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
                   <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
                 </a-menu>
@@ -77,7 +77,7 @@
             <a-select-option value="Google">Google</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="状态" required>
+        <a-form-item label="状态">
           <a-select v-model:value="formState.status">
             <a-select-option value="active">启用</a-select-option>
             <a-select-option value="inactive">禁用</a-select-option>
@@ -178,6 +178,10 @@ function handleDelete(record: ModelItem) {
   })
 }
 
+function handleActionMenuClick({ key }: { key: string }, record: ModelItem) {
+  handleMenuClick(key, record)
+}
+
 function handleMenuClick(key: string, record: ModelItem) {
   switch (key) {
     case 'edit': handleEdit(record); break
@@ -189,8 +193,8 @@ async function handleStatusChange(record: ModelItem) {
   const newStatus = record.status === 'active' ? 'inactive' : 'active'
   try {
     await updateModelApi(record.id, { ...record, status: newStatus })
-    record.status = newStatus
     message.success('状态更新成功')
+    await fetchData()
   } catch {
     message.error('状态更新失败')
   }
