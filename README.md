@@ -130,3 +130,9 @@ pnpm preview
 - 后端目录为 FastAPI 工程基础结构
 
 其余技术选型包括 SQLAlchemy、PostgreSQL、pgvector、Redis、JWT、MinIO 代表该平台的目标后端能力边界，可作为后续功能实现与模块拆分的基础。
+
+## 验证说明
+
+- 后端：已通过 `uv run pytest -q`
+- 前端：已通过 `pnpm build`
+- 本环境未进行浏览器级手动验证，仅做轻量 smoke 检查（构建/测试）
