@@ -26,6 +26,7 @@
         </a-button>
       </template>
       <a-table
+        size="small"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
@@ -33,15 +34,27 @@
         row-key="id"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'status'">
-            <a-tag :color="record.status === 'active' ? 'green' : 'default'">
-              {{ record.status === 'active' ? '启用' : '禁用' }}
-            </a-tag>
+          <template v-if="column.dataIndex === 'status'">
+            <a-switch
+              :checked="record.status === 'active'"
+              checked-children="启用"
+              un-checked-children="停用"
+              @change="handleStatusChange(record)"
+            />
           </template>
           <template v-if="column.key === 'action'">
-            <a-button type="link" @click="handleEdit(record)">编辑</a-button>
-            <a-button type="link" danger @click="handleDelete(record)">删除</a-button>
-            <a-button type="link" @click="handleAssignPermission(record)">分配权限</a-button>
+            <a-dropdown>
+              <a-button type="primary" size="small">
+                操作 <DownOutlined />
+              </a-button>
+              <template #overlay>
+                <a-menu @click="handleActionMenuClick($event, record)">
+                  <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
+                  <a-menu-item key="permission"><SafetyOutlined /> 分配权限</a-menu-item>
+                  <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </template>
         </template>
       </a-table>
@@ -50,7 +63,7 @@
     <a-drawer
       :title="drawerTitle"
       :open="drawerVisible"
-      width="480"
+      :width="drawerWidth"
       @close="drawerVisible = false"
     >
       <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
@@ -101,7 +114,8 @@ defineOptions({ name: 'SettingRole' })
 
 import { ref, reactive, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DownOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from '@ant-design/icons-vue'
+import { useDrawerWidth } from '@/composables/useDrawerWidth'
 import {
   getRoleListApi,
   createRoleApi,
@@ -157,8 +171,8 @@ const columns = [
   { title: '角色名称', dataIndex: 'name', key: 'name' },
   { title: '角色编码', dataIndex: 'code', key: 'code' },
   { title: '描述', dataIndex: 'description', key: 'description' },
-  { title: '状态', dataIndex: 'status', key: 'status' },
-  { title: '操作', key: 'action', width: 200 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
+  { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
 const loading = ref(false)
@@ -171,13 +185,14 @@ const submitLoading = ref(false)
 const permissionModalVisible = ref(false)
 const permissionRoleName = ref('')
 const checkedPermissions = ref<string[]>([])
+const { drawerWidth } = useDrawerWidth()
 
 const searchForm = reactive({ name: '', status: undefined as string | undefined })
 const formState = reactive({
   name: '',
   code: '',
   description: '',
-  status: 'active' as 'active' | 'inactive',
+  status: undefined as 'active' | 'inactive' | undefined,
 })
 
 async function fetchData() {
@@ -203,7 +218,7 @@ function handleAdd() {
   formState.name = ''
   formState.code = ''
   formState.description = ''
-  formState.status = 'active'
+  formState.status = undefined
   drawerVisible.value = true
 }
 
@@ -230,6 +245,40 @@ function handleDelete(record: RoleItem) {
   })
 }
 
+function handleActionMenuClick(info: { key: string | number }, record: RoleItem) {
+  handleMenuClick(String(info.key), record)
+}
+
+function handleMenuClick(key: string, record: RoleItem) {
+  if (key === 'edit') {
+    handleEdit(record)
+    return
+  }
+  if (key === 'delete') {
+    handleDelete(record)
+    return
+  }
+  if (key === 'permission') {
+    handleAssignPermission(record)
+  }
+}
+
+async function handleStatusChange(record: RoleItem) {
+  const newStatus = record.status === 'active' ? 'inactive' : 'active'
+  try {
+    await updateRoleApi(record.id, {
+      name: record.name,
+      code: record.code,
+      description: record.description,
+      status: newStatus,
+    })
+    record.status = newStatus
+    message.success('状态更新成功')
+  } catch {
+    message.error('状态更新失败')
+  }
+}
+
 function handleAssignPermission(record: RoleItem) {
   permissionRoleName.value = record.name
   checkedPermissions.value = []
@@ -248,7 +297,8 @@ async function handleSubmit() {
   }
   submitLoading.value = true
   try {
-    const data = { name: formState.name, code: formState.code, description: formState.description, status: formState.status }
+    const status = (editingId.value !== null ? formState.status : (formState.status ?? 'inactive')) ?? 'inactive'
+    const data = { name: formState.name, code: formState.code, description: formState.description, status }
     if (editingId.value !== null) {
       await updateRoleApi(editingId.value, data)
       message.success('更新成功')
