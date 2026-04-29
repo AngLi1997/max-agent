@@ -182,6 +182,7 @@ async def test_update_user_maps_integrity_error_during_flush_to_http_409_and_rol
     assert exc.value.status_code == 409
     session.rollback.assert_awaited_once()
     session.commit.assert_not_awaited()
+    users_routes.write_operation_log.assert_not_awaited()
 
 
 @pytest.mark.asyncio
