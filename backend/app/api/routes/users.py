@@ -91,19 +91,19 @@ async def create_user(
     )
     new_user.roles = roles
     session.add(new_user)
-    await session.flush()
-    await write_operation_log(
-        session,
-        operator_id=user.id,
-        operator_name=user.username,
-        module="用户管理",
-        action="创建用户",
-        method="POST",
-        result="成功",
-        detail=f"创建用户 {new_user.username}",
-        ip=request.client.host if request.client else "",
-    )
     try:
+        await session.flush()
+        await write_operation_log(
+            session,
+            operator_id=user.id,
+            operator_name=user.username,
+            module="用户管理",
+            action="创建用户",
+            method="POST",
+            result="成功",
+            detail=f"创建用户 {new_user.username}",
+            ip=request.client.host if request.client else "",
+        )
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
