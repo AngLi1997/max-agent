@@ -62,8 +62,14 @@ export const useTabStore = defineStore('tab', () => {
     cachedNames.value = tabs.value.map(t => t.name).filter(Boolean)
   }
 
+  function syncRoute(route: RouteLocationNormalized) {
+    if (route.path === '/login') return
+    addTab(route)
+    updateCachedNames()
+  }
+
   return {
     tabs, activeTab, cachedNames,
-    addTab, removeTab, closeLeft, closeRight, closeOthers, closeAll, updateCachedNames,
+    addTab, removeTab, closeLeft, closeRight, closeOthers, closeAll, updateCachedNames, syncRoute,
   }
 })

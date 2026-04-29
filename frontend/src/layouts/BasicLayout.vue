@@ -33,10 +33,7 @@ const selectedKeys = computed(() => [route.path])
 const openKeys = ref<string[]>(['/setting'])
 
 watch(() => route.path, () => {
-  if (route.path !== '/login') {
-    tabStore.addTab(route)
-    tabStore.updateCachedNames()
-  }
+  tabStore.syncRoute(route)
 }, { immediate: true })
 
 function handleMenuClick({ key }: { key: string }) {
