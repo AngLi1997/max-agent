@@ -26,6 +26,7 @@
         </a-button>
       </template>
       <a-table
+        size="small"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
@@ -33,14 +34,26 @@
         row-key="id"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'status'">
-            <a-tag :color="record.status === 'active' ? 'green' : 'default'">
-              {{ record.status === 'active' ? '启用' : '禁用' }}
-            </a-tag>
+          <template v-if="column.dataIndex === 'status'">
+            <a-switch
+              :checked="record.status === 'active'"
+              checked-children="启用"
+              un-checked-children="停用"
+              @change="handleStatusChange(record)"
+            />
           </template>
           <template v-if="column.key === 'action'">
-            <a-button type="link" @click="handleEdit(record)">编辑</a-button>
-            <a-button type="link" danger @click="handleDelete(record)">删除</a-button>
+            <a-dropdown>
+              <a-button type="primary" size="small">
+                操作 <DownOutlined />
+              </a-button>
+              <template #overlay>
+                <a-menu @click="({ key: k }: { key: string }) => handleMenuClick(k, record)">
+                  <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
+                  <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </template>
         </template>
       </a-table>
@@ -49,7 +62,7 @@
     <a-drawer
       :title="drawerTitle"
       :open="drawerVisible"
-      width="480"
+      :width="drawerWidth"
       @close="drawerVisible = false"
     >
       <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
@@ -88,7 +101,10 @@ defineOptions({ name: 'SettingUser' })
 
 import { ref, reactive, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DownOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { useDrawerWidth } from '@/composables/useDrawerWidth'
+
+const { drawerWidth } = useDrawerWidth()
 
 interface UserItem {
   id: number
@@ -110,9 +126,9 @@ const columns = [
   { title: '用户名', dataIndex: 'username', key: 'username' },
   { title: '邮箱', dataIndex: 'email', key: 'email' },
   { title: '角色', dataIndex: 'role', key: 'role' },
-  { title: '状态', dataIndex: 'status', key: 'status' },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
   { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt' },
-  { title: '操作', key: 'action', width: 120 },
+  { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
 const loading = ref(false)
@@ -128,7 +144,7 @@ const formState = reactive({
   username: '',
   email: '',
   role: undefined as string | undefined,
-  status: 'active' as 'active' | 'inactive',
+  status: undefined as 'active' | 'inactive' | undefined,
 })
 
 function fetchData() {
@@ -159,7 +175,7 @@ function handleAdd() {
   formState.username = ''
   formState.email = ''
   formState.role = undefined
-  formState.status = 'active'
+  formState.status = undefined
   drawerVisible.value = true
 }
 
@@ -187,26 +203,47 @@ function handleDelete(record: UserItem) {
   })
 }
 
+function handleMenuClick(key: string, record: UserItem) {
+  switch (key) {
+    case 'edit': handleEdit(record); break
+    case 'delete': handleDelete(record); break
+  }
+}
+
+function handleStatusChange(record: UserItem) {
+  const newStatus = record.status === 'active' ? 'inactive' : 'active'
+  const index = mockData.findIndex((item) => item.id === record.id)
+  if (index !== -1) {
+    mockData[index].status = newStatus
+    record.status = newStatus
+  }
+  message.success('状态更新成功')
+}
+
 function handleSubmit() {
   if (!formState.username || !formState.email || !formState.role) {
     message.warning('请填写完整信息')
     return
   }
   submitLoading.value = true
+  const data = { ...formState }
+  if (editingId.value === null && !data.status) {
+    data.status = 'inactive'
+  }
   setTimeout(() => {
     if (editingId.value !== null) {
       const index = mockData.findIndex((item) => item.id === editingId.value)
       if (index !== -1) {
-        mockData[index] = { ...mockData[index], username: formState.username, email: formState.email, role: formState.role!, status: formState.status }
+        mockData[index] = { ...mockData[index], username: data.username, email: data.email, role: data.role!, status: data.status as 'active' | 'inactive' }
       }
       message.success('更新成功')
     } else {
       mockData.push({
         id: nextId++,
-        username: formState.username,
-        email: formState.email,
-        role: formState.role!,
-        status: formState.status,
+        username: data.username,
+        email: data.email,
+        role: data.role!,
+        status: data.status as 'active' | 'inactive',
         createdAt: new Date().toLocaleString('zh-CN').replace(/\//g, '-'),
       })
       message.success('创建成功')
