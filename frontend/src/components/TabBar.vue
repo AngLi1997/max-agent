@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useTabStore } from '../stores/tab'
+import { useTabStore } from '@/stores/tab'
 
 const router = useRouter()
 const tabStore = useTabStore()
