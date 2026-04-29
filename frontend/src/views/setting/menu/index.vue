@@ -14,17 +14,31 @@
         row-key="id"
         :pagination="false"
         childrenColumnName="children"
+        size="small"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
-            <a-tag :color="record.status === 'active' ? 'green' : 'default'">
-              {{ record.status === 'active' ? '启用' : '禁用' }}
-            </a-tag>
+            <a-switch
+              :checked="record.status === 'active'"
+              checked-children="启用"
+              un-checked-children="停用"
+              @change="handleStatusChange(record)"
+            />
           </template>
           <template v-if="column.key === 'action'">
-            <a-button type="link" @click="handleEdit(record)">编辑</a-button>
-            <a-button type="link" danger @click="handleDelete(record)">删除</a-button>
-            <a-button type="link" @click="handleAddChild(record)">新增子菜单</a-button>
+            <a-dropdown>
+              <a-button type="primary" size="small">
+                操作 <DownOutlined />
+              </a-button>
+              <template #overlay>
+                <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
+                  <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
+                  <a-menu-item key="addChild"><PlusOutlined /> 新增子菜单</a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
           </template>
         </template>
       </a-table>
@@ -33,7 +47,7 @@
     <a-drawer
       :title="drawerTitle"
       :open="drawerVisible"
-      width="520"
+      :width="drawerWidth"
       @close="drawerVisible = false"
     >
       <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
@@ -60,8 +74,8 @@
         <a-form-item label="排序" required>
           <a-input-number v-model:value="formState.sort" :min="1" style="width: 100%" />
         </a-form-item>
-        <a-form-item label="状态" required>
-          <a-select v-model:value="formState.status">
+        <a-form-item label="状态">
+          <a-select v-model:value="formState.status" placeholder="请选择状态">
             <a-select-option value="active">启用</a-select-option>
             <a-select-option value="inactive">禁用</a-select-option>
           </a-select>
@@ -82,16 +96,19 @@ defineOptions({ name: 'SettingMenu' })
 
 import { ref, reactive, computed, onMounted } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, DownOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { getMenuTreeApi, createMenuApi, updateMenuApi, deleteMenuApi, type MenuItem } from '../../../api/menu'
+import { useDrawerWidth } from '@/composables/useDrawerWidth'
+
+const { drawerWidth } = useDrawerWidth()
 
 const columns = [
   { title: '菜单名称', dataIndex: 'name', key: 'name' },
   { title: '路由', dataIndex: 'path', key: 'path' },
   { title: '权限标识', dataIndex: 'permission', key: 'permission' },
   { title: '排序', dataIndex: 'sort', key: 'sort', width: 80 },
-  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '操作', key: 'action', width: 220 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
+  { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
 const loading = ref(false)
@@ -107,7 +124,7 @@ const formState = reactive({
   path: '',
   permission: '',
   sort: 1,
-  status: 'active' as 'active' | 'inactive',
+  status: '' as 'active' | 'inactive' | '',
 })
 
 const menuTreeOptions = computed(() => dataSource.value)
@@ -127,7 +144,7 @@ function resetForm() {
   formState.path = ''
   formState.permission = ''
   formState.sort = 1
-  formState.status = 'active'
+  formState.status = ''
 }
 
 function handleAdd() {
@@ -170,6 +187,29 @@ function handleDelete(record: MenuItem) {
   })
 }
 
+async function handleStatusChange(record: MenuItem) {
+  const newStatus = record.status === 'active' ? 'inactive' : 'active'
+  try {
+    await updateMenuApi(record.id, { ...record, status: newStatus })
+    message.success('状态更新成功')
+    await fetchData()
+  } catch {
+    message.error('状态更新失败')
+  }
+}
+
+function handleMenuClick(key: string, record: MenuItem) {
+  switch (key) {
+    case 'edit': handleEdit(record); break
+    case 'addChild': handleAddChild(record); break
+    case 'delete': handleDelete(record); break
+  }
+}
+
+function handleActionMenuClick({ key }: { key: string }, record: MenuItem) {
+  handleMenuClick(key, record)
+}
+
 async function handleSubmit() {
   if (!formState.name || !formState.path) {
     message.warning('请填写完整信息')
@@ -177,13 +217,16 @@ async function handleSubmit() {
   }
   submitLoading.value = true
   try {
+    const status = (editingId.value === null && !formState.status)
+      ? 'inactive'
+      : (formState.status as 'active' | 'inactive')
     const data = {
       name: formState.name,
       parentId: formState.parentId,
       path: formState.path,
       permission: formState.permission,
       sort: formState.sort,
-      status: formState.status,
+      status,
     }
     if (editingId.value !== null) {
       await updateMenuApi(editingId.value, data)
