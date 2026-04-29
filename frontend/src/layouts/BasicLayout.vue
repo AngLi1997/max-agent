@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAppStore } from '../stores/app'
-import { useUserStore } from '../stores/user'
+import { useAppStore } from '@/stores/app'
+import { useUserStore } from '@/stores/user'
+import { useTabStore } from '@/stores/tab'
+import TabBar from '@/components/TabBar.vue'
 import {
   DashboardOutlined,
   RobotOutlined,
@@ -25,9 +27,17 @@ const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
 const userStore = useUserStore()
+const tabStore = useTabStore()
 
 const selectedKeys = computed(() => [route.path])
 const openKeys = ref<string[]>(['/setting'])
+
+watch(() => route.path, () => {
+  if (route.path !== '/login') {
+    tabStore.addTab(route)
+    tabStore.updateCachedNames()
+  }
+}, { immediate: true })
 
 function handleMenuClick({ key }: { key: string }) {
   router.push(key)
@@ -133,8 +143,15 @@ function handleLogout() {
           </template>
         </a-dropdown>
       </a-layout-header>
-      <a-layout-content style="margin: 16px; padding: 24px; background: #fff; border-radius: 8px; min-height: 280px;">
-        <router-view />
+      <a-layout-content style="margin: 16px; padding: 0; background: #fff; border-radius: 8px; min-height: 280px; overflow: hidden;">
+        <TabBar />
+        <div style="padding: 24px;">
+          <router-view v-slot="{ Component }">
+            <keep-alive :include="tabStore.cachedNames">
+              <component :is="Component" />
+            </keep-alive>
+          </router-view>
+        </div>
       </a-layout-content>
     </a-layout>
   </a-layout>
