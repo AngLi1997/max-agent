@@ -7,11 +7,13 @@ const routes: RouteRecordRaw[] = [
     path: '/login',
     name: 'Login',
     component: () => import('../views/login/index.vue'),
+    meta: { title: '登录' },
   },
   {
     path: '/',
     component: () => import('../layouts/BasicLayout.vue'),
     redirect: '/dashboard',
+    meta: { title: '主页' },
     children: [
       { path: 'dashboard', name: 'Dashboard', component: () => import('../views/dashboard/index.vue'), meta: { title: '仪表盘' } },
       { path: 'model', name: 'Model', component: () => import('../views/model/index.vue'), meta: { title: '模型管理' } },
