@@ -17,6 +17,8 @@ from app.services.audit import write_operation_log
 from app.services.auth import current_active_user
 from app.services.authorization import require_permission
 from app.services.system_permissions import delete_permission_or_raise
+from app.utils.request import get_client_ip
+from app.utils.time import format_datetime
 
 router = APIRouter(prefix="/permissions", tags=["permissions"])
 
@@ -48,7 +50,7 @@ async def list_permissions(
             identifier=p.identifier,
             type=p.type,
             status=p.status,
-            createdAt=p.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            createdAt=format_datetime(p.created_at),
         )
         for p in rows
     ]
@@ -80,7 +82,7 @@ async def create_permission(
             method="POST",
             result="成功",
             detail=f"创建权限 {perm.name}",
-            ip=request.client.host if request.client else "",
+            ip=get_client_ip(request),
         )
         await session.commit()
     except IntegrityError as exc:
@@ -93,7 +95,7 @@ async def create_permission(
         identifier=perm.identifier,
         type=perm.type,
         status=perm.status,
-        createdAt=perm.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        createdAt=format_datetime(perm.created_at),
     )
 
 
@@ -122,7 +124,7 @@ async def update_permission(
         method="PUT",
         result="成功",
         detail=f"更新权限 {perm.name}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     try:
         await session.commit()
@@ -136,7 +138,7 @@ async def update_permission(
         identifier=perm.identifier,
         type=perm.type,
         status=perm.status,
-        createdAt=perm.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        createdAt=format_datetime(perm.created_at),
     )
 
 
@@ -170,7 +172,7 @@ async def delete_permission(
         method="DELETE",
         result="成功",
         detail=f"删除权限 {perm.name}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "删除成功"}
@@ -198,7 +200,7 @@ async def update_permission_status(
         method="PATCH",
         result="成功",
         detail=f"权限 {perm.name} 状态更新为 {payload.status}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "状态更新成功"}

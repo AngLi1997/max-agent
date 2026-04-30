@@ -22,6 +22,7 @@ from app.services.auth import (
 from app.services.rbac import collect_user_permissions
 from app.services.system_menus import build_menu_tree
 from app.services.system_users import build_current_user_payload, change_own_password
+from app.utils.request import get_client_ip, parse_device
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -40,8 +41,8 @@ async def login(
     user_manager=Depends(get_user_manager),
     strategy: SlidingRedisStrategy = Depends(get_redis_strategy),
 ) -> LoginResponse:
-    ip = request.client.host if request.client else ""
-    device = request.headers.get("user-agent", "")
+    ip = get_client_ip(request)
+    device = parse_device(request.headers.get("user-agent", ""))
 
     user = await authenticate_user(payload, session, user_manager)
     if user is None:
@@ -139,8 +140,8 @@ async def logout(
     strategy: SlidingRedisStrategy = Depends(get_redis_strategy),
     session: AsyncSession = Depends(get_db_session),
 ) -> dict[str, str]:
-    ip = request.client.host if request.client else ""
-    device = request.headers.get("user-agent", "")
+    ip = get_client_ip(request)
+    device = parse_device(request.headers.get("user-agent", ""))
     await strategy.destroy_token(token, user)
     await write_login_log(
         session,
@@ -157,6 +158,7 @@ async def logout(
 
 @router.post("/change-password")
 async def change_password(
+    request: Request,
     payload: ChangePasswordRequest,
     user: User = Depends(current_active_user),
     session: AsyncSession = Depends(get_db_session),
@@ -175,7 +177,7 @@ async def change_password(
         method="POST",
         result="成功",
         detail=f"用户 {user.username} 修改了自己的密码",
-        ip="",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "密码修改成功"}

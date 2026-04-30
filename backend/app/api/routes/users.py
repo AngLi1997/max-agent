@@ -15,6 +15,8 @@ from app.services.audit import write_operation_log
 from app.services.auth import SlidingRedisStrategy, current_active_user, get_redis_strategy
 from app.services.authorization import require_permission
 from app.services.system_users import create_temporary_password, delete_user_or_raise, reset_password_for_user
+from app.utils.request import get_client_ip
+from app.utils.time import format_datetime
 
 router = APIRouter(prefix="/users", tags=["users"])
 password_hash = PasswordHash.recommended()
@@ -38,7 +40,7 @@ def _build_user_item(user: User) -> UserListItem:
         roles=role_items,
         roleIds=[r.id for r in user.roles],
         status=user.status,
-        createdAt=user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        createdAt=format_datetime(user.created_at),
         isBuiltin=user.is_builtin,
     )
 
@@ -108,7 +110,7 @@ async def create_user(
             method="POST",
             result="成功",
             detail=f"创建用户 {new_user.username}",
-            ip=request.client.host if request.client else "",
+            ip=get_client_ip(request),
         )
         await session.commit()
     except IntegrityError as exc:
@@ -159,7 +161,7 @@ async def update_user(
             method="PUT",
             result="成功",
             detail=f"更新用户 {target.username}",
-            ip=request.client.host if request.client else "",
+            ip=get_client_ip(request),
         )
         await session.commit()
     except IntegrityError as exc:
@@ -195,7 +197,7 @@ async def delete_user(
         method="DELETE",
         result="成功",
         detail=f"删除用户 {target.username}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "删除成功"}
@@ -230,7 +232,7 @@ async def update_user_status(
         method="PATCH",
         result="成功",
         detail=f"用户 {target.username} 状态更新为 {payload.status}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "状态更新成功"}
@@ -263,7 +265,7 @@ async def reset_user_password(
         method="POST",
         result="成功",
         detail=f"重置用户 {target.username} 的密码",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "密码重置成功", "temporaryPassword": temporary_password}

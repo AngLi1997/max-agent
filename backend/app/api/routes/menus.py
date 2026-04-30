@@ -12,6 +12,7 @@ from app.services.audit import write_operation_log
 from app.services.auth import current_active_user
 from app.services.authorization import require_permission
 from app.services.system_menus import apply_menu_status, build_menu_tree, validate_menu_parent
+from app.utils.request import get_client_ip
 
 router = APIRouter(prefix="/menus", tags=["menus"])
 
@@ -75,7 +76,7 @@ async def create_menu(
             method="POST",
             result="成功",
             detail=f"创建菜单 {menu.name}",
-            ip=request.client.host if request.client else "",
+            ip=get_client_ip(request),
         )
         await session.commit()
     except IntegrityError:
@@ -133,7 +134,7 @@ async def update_menu(
         method="PUT",
         result="成功",
         detail=f"更新菜单 {menu.name}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     await session.refresh(menu)
@@ -172,7 +173,7 @@ async def delete_menu(
         method="DELETE",
         result="成功",
         detail=f"删除菜单 {name}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "删除成功"}
@@ -200,7 +201,7 @@ async def update_menu_status(
         method="PATCH",
         result="成功",
         detail=f"菜单 {menu.name} 状态更新为 {payload.status}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "状态更新成功"}

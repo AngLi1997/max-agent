@@ -12,6 +12,7 @@ from app.schemas.common import ListResponse
 from app.schemas.log import LoginLogItem, OperationLogItem
 from app.services.auth import current_active_user
 from app.services.authorization import require_permission
+from app.utils.time import format_datetime, parse_local_datetime
 
 router = APIRouter(tags=["logs"])
 
@@ -20,7 +21,7 @@ def _parse_datetime(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value)
+        return parse_local_datetime(value)
     except ValueError as exc:
         raise ValueError(f"时间格式无效: {value}") from exc
 
@@ -61,7 +62,7 @@ async def list_operation_logs(
             action=row.action,
             method=row.method,
             result=row.result,
-            time=row.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            time=format_datetime(row.created_at),
             detail=row.detail,
         )
         for row in rows
@@ -105,7 +106,7 @@ async def list_login_logs(
             location=row.location,
             device=row.device,
             result=row.result,
-            time=row.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            time=format_datetime(row.created_at),
             detail=row.detail,
         )
         for row in rows

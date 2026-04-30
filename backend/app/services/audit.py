@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.login_log import LoginLog
 from app.models.operation_log import OperationLog
+from app.utils.request import describe_ip_location
 
 
 async def write_login_log(
@@ -19,7 +20,7 @@ async def write_login_log(
             user_id=user_id,
             username=username,
             ip=ip,
-            location="",
+            location=describe_ip_location(ip),
             device=device,
             result=result,
             detail=detail,

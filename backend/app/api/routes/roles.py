@@ -24,6 +24,8 @@ from app.services.system_roles import (
     replace_role_permissions,
     validate_permission_ids,
 )
+from app.utils.request import get_client_ip
+from app.utils.time import format_datetime
 
 router = APIRouter(prefix="/roles", tags=["roles"])
 
@@ -59,7 +61,7 @@ async def list_roles(
             description=r.description,
             status=r.status,
             isBuiltin=r.is_builtin,
-            createdAt=r.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            createdAt=format_datetime(r.created_at),
         )
         for r in rows
     ]
@@ -91,7 +93,7 @@ async def create_role(
             method="POST",
             result="成功",
             detail=f"创建角色 {role.name}",
-            ip=request.client.host if request.client else "",
+            ip=get_client_ip(request),
         )
         await session.commit()
     except IntegrityError as exc:
@@ -105,7 +107,7 @@ async def create_role(
         description=role.description,
         status=role.status,
         isBuiltin=role.is_builtin,
-        createdAt=role.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        createdAt=format_datetime(role.created_at),
     )
 
 
@@ -135,7 +137,7 @@ async def update_role(
             method="PUT",
             result="成功",
             detail=f"更新角色 {role.name}",
-            ip=request.client.host if request.client else "",
+            ip=get_client_ip(request),
         )
         await session.commit()
     except IntegrityError as exc:
@@ -149,7 +151,7 @@ async def update_role(
         description=role.description,
         status=role.status,
         isBuiltin=role.is_builtin,
-        createdAt=role.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+        createdAt=format_datetime(role.created_at),
     )
 
 
@@ -178,7 +180,7 @@ async def delete_role(
         method="DELETE",
         result="成功",
         detail=f"删除角色 {role.name}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "删除成功"}
@@ -206,7 +208,7 @@ async def update_role_status(
         method="PATCH",
         result="成功",
         detail=f"角色 {role.name} 状态更新为 {payload.status}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "状态更新成功"}
@@ -255,7 +257,7 @@ async def assign_role_permissions(
         method="PUT",
         result="成功",
         detail=f"角色 {role.name} 分配了 {len(permissions)} 个权限",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "权限分配成功"}

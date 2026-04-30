@@ -12,6 +12,7 @@ from app.services.audit import write_operation_log
 from app.services.auth import current_active_user
 from app.services.authorization import require_permission
 from app.services.system_configs import update_config_value
+from app.utils.request import get_client_ip
 
 router = APIRouter(prefix="/configs", tags=["configs"])
 
@@ -71,7 +72,7 @@ async def create_config(
             method="POST",
             result="成功",
             detail=f"创建配置 {config.key}",
-            ip=request.client.host if request.client else "",
+            ip=get_client_ip(request),
         )
         await session.commit()
     except IntegrityError as exc:
@@ -115,7 +116,7 @@ async def update_config(
         method="PUT",
         result="成功",
         detail=f"更新配置 {config.key}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     try:
         await session.commit()
@@ -153,7 +154,7 @@ async def delete_config(
         method="DELETE",
         result="成功",
         detail=f"删除配置 {key}",
-        ip=request.client.host if request.client else "",
+        ip=get_client_ip(request),
     )
     await session.commit()
     return {"message": "删除成功"}
