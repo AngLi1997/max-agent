@@ -10,11 +10,11 @@ export interface PermissionItem {
 }
 
 export function getPermissionListApi(params: { name?: string; type?: string }) {
-  return request.get('/permissions', { params }) as Promise<{ list: PermissionItem[]; total: number }>
+  return request.get('/permissions/', { params }) as Promise<{ list: PermissionItem[]; total: number }>
 }
 
 export function createPermissionApi(data: { name: string; identifier: string; type: string; status: string }) {
-  return request.post('/permissions', data) as Promise<PermissionItem>
+  return request.post('/permissions/', data) as Promise<PermissionItem>
 }
 
 export function updatePermissionApi(id: number, data: { name: string; identifier: string; type: string; status: string }) {

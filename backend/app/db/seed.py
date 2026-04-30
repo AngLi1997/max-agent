@@ -3,6 +3,7 @@ import asyncio
 from pwdlib import PasswordHash
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.db.session import AsyncSessionLocal
 from app.models.menu import Menu
@@ -98,6 +99,10 @@ async def seed_roles(session: AsyncSession) -> dict[str, Role]:
     for data in ROLES:
         existing = await session.scalar(select(Role).where(Role.code == data["code"]))
         if existing:
+            if existing.is_builtin != data["is_builtin"]:
+                existing.is_builtin = data["is_builtin"]
+                session.add(existing)
+                await session.flush()
             roles_map[data["code"]] = existing
             continue
         role = Role(**data)
@@ -124,14 +129,22 @@ async def seed_permissions(session: AsyncSession) -> list[Permission]:
 async def seed_users(session: AsyncSession, roles_map: dict[str, Role]) -> None:
     for data in USERS:
         existing = await session.scalar(
-            select(User).where(
+            select(User)
+            .options(selectinload(User.roles))
+            .where(
                 or_(User.username == data["username"], User.email == data["email"])
             )
         )
         if existing:
+            changed = False
+            if existing.is_builtin != data["is_builtin"]:
+                existing.is_builtin = data["is_builtin"]
+                changed = True
             role = roles_map.get(data["role_code"])
             if role and role not in existing.roles:
                 existing.roles.append(role)
+                changed = True
+            if changed:
                 session.add(existing)
                 await session.flush()
             continue
@@ -201,8 +214,13 @@ async def seed_initial_data() -> None:
             # 将所有权限绑定到 admin 角色
             admin_role = roles_map.get("admin")
             if admin_role:
-                for perm in all_permissions:
-                    if perm not in admin_role.permissions:
+                admin_role = await session.scalar(
+                    select(Role).options(selectinload(Role.permissions)).where(Role.id == admin_role.id)
+                )
+                all_db_permissions = (await session.scalars(select(Permission))).all()
+                existing_ids = {p.id for p in admin_role.permissions}
+                for perm in all_db_permissions:
+                    if perm.id not in existing_ids:
                         admin_role.permissions.append(perm)
                 session.add(admin_role)
                 await session.flush()

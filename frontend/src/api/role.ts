@@ -11,11 +11,11 @@ export interface RoleItem {
 }
 
 export function getRoleListApi(params: { name?: string; status?: string }) {
-  return request.get('/roles', { params }) as Promise<{ list: RoleItem[]; total: number }>
+  return request.get('/roles/', { params }) as Promise<{ list: RoleItem[]; total: number }>
 }
 
 export function createRoleApi(data: { name: string; code: string; description: string; status: string }) {
-  return request.post('/roles', data) as Promise<RoleItem>
+  return request.post('/roles/', data) as Promise<RoleItem>
 }
 
 export function updateRoleApi(id: number, data: { name: string; code: string; description: string; status: string }) {

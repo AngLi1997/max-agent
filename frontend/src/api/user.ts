@@ -73,11 +73,11 @@ export interface CreateUserResponse {
 }
 
 export function getUserListApi(params: { username?: string; status?: string }) {
-  return request.get('/users', { params }) as Promise<{ list: UserListItem[]; total: number }>
+  return request.get('/users/', { params }) as Promise<{ list: UserListItem[]; total: number }>
 }
 
 export function createUserApi(data: { username: string; email: string; roleIds: number[]; status: string }) {
-  return request.post('/users', data) as Promise<CreateUserResponse>
+  return request.post('/users/', data) as Promise<CreateUserResponse>
 }
 
 export function updateUserApi(id: number, data: { username: string; email: string; roleIds: number[]; status: string }) {

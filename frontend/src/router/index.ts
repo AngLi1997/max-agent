@@ -49,7 +49,7 @@ router.beforeEach((to) => {
     return '/login'
   }
   if (userStore.token && to.path === '/login') {
-    return userStore.menus?.[0]?.path || '/dashboard'
+    return '/dashboard'
   }
   if (to.path.startsWith('/setting') && userStore.token) {
     if (userStore.menus.length === 0) {

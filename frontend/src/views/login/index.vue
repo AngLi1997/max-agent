@@ -27,7 +27,7 @@ async function handleLogin() {
     const userInfo = await getUserInfoApi()
     userStore.setAuthPayload(userInfo)
     message.success('登录成功')
-    router.push(userInfo.menus?.[0]?.path || '/dashboard')
+    router.push('/dashboard')
   } catch (e: any) {
     message.error(e.response?.data?.detail || e.message || '登录失败')
   } finally {

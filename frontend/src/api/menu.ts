@@ -18,7 +18,7 @@ export function getMenuTreeApi() {
 }
 
 export function createMenuApi(data: Omit<MenuItem, 'id' | 'children'>) {
-  return request.post('/menus', data) as Promise<MenuItem>
+  return request.post('/menus/', data) as Promise<MenuItem>
 }
 
 export function updateMenuApi(id: number, data: Omit<MenuItem, 'id' | 'children'>) {
