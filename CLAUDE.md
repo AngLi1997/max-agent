@@ -138,6 +138,17 @@ const tableScroll = useTableScrollY()
 
 关键点：Ant Design Vue 4.x 在 `.ant-table` 和 header/body 之间有 `.ant-table-container` 层，flex 链路中不可遗漏此层，否则表格内容会溢出屏幕。
 
+### Drawer / Modal UI 规范
+
+**标题蓝色矩形装饰：** 全局 CSS 已为所有 `a-drawer` 和 `a-modal` 标题自动添加蓝色矩形装饰（`::before` 伪元素），无需在组件中手动添加。
+
+**表单按钮右对齐：** 全局 CSS 已将 Drawer/Modal 内表单最后一个 `a-form-item` 的内容区域设为 `flex + justify-content: flex-end`，按钮自动右对齐，无需在组件中单独设置。
+
+**中文化要求：**
+- 所有 placeholder 使用中文（"请输入…"、"请选择…"）
+- 确认/取消按钮使用中文（"确认"、"取消"）
+- 提示信息、校验消息均使用中文
+
 ## 当前代码状态的实际含义
 
 这是一个刚初始化的仓库：

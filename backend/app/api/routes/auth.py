@@ -165,7 +165,7 @@ async def change_password(
         change_own_password(user, old_password=payload.oldPassword, new_password=payload.newPassword)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    session.add(user)
+    await session.merge(user)
     await write_operation_log(
         session,
         operator_id=user.id,

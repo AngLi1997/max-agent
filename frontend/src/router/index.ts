@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import { getUserInfoApi } from '../api/user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -43,13 +44,22 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore()
   if (!userStore.token && to.path !== '/login') {
     return '/login'
   }
   if (userStore.token && to.path === '/login') {
     return '/dashboard'
+  }
+  if (userStore.token && !userStore.userInfo) {
+    try {
+      const info = await getUserInfoApi()
+      userStore.setAuthPayload(info)
+    } catch {
+      userStore.clearToken()
+      return '/login'
+    }
   }
   if (to.path.startsWith('/setting') && userStore.token) {
     if (userStore.menus.length === 0) {

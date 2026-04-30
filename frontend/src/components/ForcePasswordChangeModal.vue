@@ -18,7 +18,10 @@
         <a-input-password v-model:value="formState.confirmPassword" placeholder="请再次输入新密码" />
       </a-form-item>
       <a-form-item :wrapper-col="{ offset: 6, span: 16 }">
-        <a-button type="primary" html-type="submit" :loading="loading" block>确认修改</a-button>
+        <a-space>
+          <a-button type="primary" html-type="submit" :loading="loading">确认</a-button>
+          <a-button @click="emit('logout')">退出登录</a-button>
+        </a-space>
       </a-form-item>
     </a-form>
   </a-modal>
@@ -30,7 +33,7 @@ import { message } from 'ant-design-vue'
 import { changePasswordApi } from '@/api/user'
 
 defineProps<{ open: boolean }>()
-const emit = defineEmits<{ success: [] }>()
+const emit = defineEmits<{ success: []; logout: [] }>()
 
 const formState = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const loading = ref(false)

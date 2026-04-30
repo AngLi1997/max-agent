@@ -5,7 +5,7 @@ created: 2026-04-29
 updated: 2026-04-30
 sources: [frontend-src-structure, router-index, stores, api-layer, views]
 tags: [frontend, architecture]
-related: [[overview]], [[concepts/tech-stack]], [[concepts/rbac]], [[concepts/table-layout-convention]]
+related: [[overview]], [[concepts/tech-stack]], [[concepts/rbac]], [[concepts/table-layout-convention]], [[concepts/ui-global-conventions]]
 ---
 
 # 前端架构
@@ -75,9 +75,14 @@ frontend/src/
 
 ## 认证守卫
 
-- 无 token 且非登录页 → 重定向到 `/login`
-- 有 token 且在登录页 → 重定向到 `/dashboard`
-- 访问 `/setting/*` 时检查菜单权限，无权限重定向到首个可访问菜单
+路由守卫为 `async beforeEach`，在导航前确保用户信息已加载：
+
+1. 无 token 且非登录页 → 重定向到 `/login`
+2. 有 token 且在登录页 → 重定向到 `/dashboard`
+3. 有 token 但 `userInfo` 为空（页面刷新场景）→ 异步调用 `getUserInfoApi()` 加载用户信息，失败则清除 token 跳转登录
+4. 访问 `/setting/*` 时检查菜单权限，无权限重定向到首个可访问菜单
+
+用户信息加载在路由守卫中完成（而非 App.vue onMounted），确保刷新任意页面时 menus 数据在权限判断前就绪。
 
 ## 布局结构
 

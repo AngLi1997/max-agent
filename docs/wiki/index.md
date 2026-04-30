@@ -10,6 +10,7 @@
 - [[concepts/table-layout-convention]] - 表格页面布局规范 (flex 链路 + useTableScrollY)
 - [[concepts/rbac]] - RBAC 权限模型 (34 权限 / 3 角色 / 前后端联调)
 - [[concepts/data-model]] - 数据模型与 ER 关系 (7 个模型 + 2 关联表)
+- [[concepts/ui-global-conventions]] - UI 全局规范 (标题装饰 / 按钮对齐 / 中文化)
 
 ## Entities
 - [[entities/postgresql]] - PostgreSQL 17 + pgvector，核心数据存储

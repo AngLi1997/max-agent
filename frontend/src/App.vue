@@ -1,21 +1,22 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { getUserInfoApi } from './api/user'
+import { useRouter } from 'vue-router'
 import ForcePasswordChangeModal from './components/ForcePasswordChangeModal.vue'
 import { useUserStore } from './stores/user'
+import { logoutApi } from './api/user'
 
 const userStore = useUserStore()
+const router = useRouter()
 
-onMounted(async () => {
-  if (userStore.token && !userStore.userInfo) {
-    try {
-      const info = await getUserInfoApi()
-      userStore.setAuthPayload(info)
-    } catch {
-      userStore.clearToken()
+async function handleLogout() {
+  try {
+    if (userStore.token) {
+      await logoutApi()
     }
+  } finally {
+    userStore.clearToken()
+    router.push('/login')
   }
-})
+}
 </script>
 
 <template>
@@ -23,5 +24,6 @@ onMounted(async () => {
   <ForcePasswordChangeModal
     :open="userStore.mustChangePassword"
     @success="userStore.mustChangePassword = false"
+    @logout="handleLogout"
   />
 </template>

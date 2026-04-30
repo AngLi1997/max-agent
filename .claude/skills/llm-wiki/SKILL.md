@@ -38,21 +38,21 @@ Transform your LLM into a knowledge base maintainer. Instead of just retrieving 
 ## Three-Layer Architecture
 
 ```
-wiki-project/
-├── raw/                        # Layer 1: Source documents (immutable)
-│   ├── articles/
-│   ├── papers/
-│   └── assets/
-├── wiki/                       # Layer 2: LLM-maintained knowledge base
-│   ├── index.md                # Content index
-│   ├── overview.md             # Synthesis overview
-│   ├── entities/               # Entity pages (people, orgs, products)
-│   ├── concepts/               # Concept pages (ideas, theories, methods)
-│   ├── sources/                # Source summaries
-│   └── comparisons/            # Comparison analyses
-├── log.md                      # Chronological activity log
-└── wiki/
-    ├── WIKI.md                 # Layer 3: Schema configuration
+project/
+├── docs/                          # All wiki-related files live here
+│   ├── raw/                      # Layer 1: Source documents (immutable)
+│   │   ├── articles/
+│   │   ├── papers/
+│   │   └── assets/
+│   ├── wiki/                     # Layer 2: LLM-maintained knowledge base
+│   │   ├── index.md              # Content index
+│   │   ├── overview.md           # Synthesis overview
+│   │   ├── entities/             # Entity pages (people, orgs, products)
+│   │   ├── concepts/             # Concept pages (ideas, theories, methods)
+│   │   ├── sources/              # Source summaries
+│   │   ├── comparisons/          # Comparison analyses
+│   │   └── WIKI.md              # Layer 3: Schema configuration
+│   └── log.md                    # Chronological activity log
 ```
 
 ## Core Operations
@@ -63,20 +63,20 @@ wiki-project/
 
 **Workflow**:
 ```
-1. Read the source document from raw/
+1. Read the source document from docs/raw/
 2. Discuss key takeaways with user (if interactive mode)
-3. Create/update source summary in wiki/sources/
-4. Extract and update entity pages in wiki/entities/
-5. Extract and update concept pages in wiki/concepts/
-6. Update wiki/index.md with new entries
-7. Append entry to log.md
+3. Create/update source summary in docs/wiki/sources/
+4. Extract and update entity pages in docs/wiki/entities/
+5. Extract and update concept pages in docs/wiki/concepts/
+6. Update docs/wiki/index.md with new entries
+7. Append entry to docs/log.md
 ```
 
 **Interactive vs Batch Mode**:
 - **Interactive** (important sources): Pause after reading source, discuss with user, get guidance on emphasis
 - **Batch** (secondary sources): Process autonomously without user interaction
 
-Configure mode in `WIKI.md`:
+Configure mode in `docs/wiki/WIKI.md`:
 ```yaml
 workflow:
   default_mode: interactive  # or batch
@@ -98,8 +98,8 @@ workflow:
 
 **Workflow**:
 ```
-1. Read wiki/index.md to locate relevant pages
-2. Read relevant wiki pages
+1. Read docs/wiki/index.md to locate relevant pages
+2. Read relevant docs/wiki/ pages
 3. Synthesize answer with citations
 4. (Optional) Write answer back to wiki as new page
 ```
@@ -174,7 +174,7 @@ related: [[related-page-1]], [[related-page-2]]
 ---
 ```
 
-### Index Format (wiki/index.md)
+### Index Format (docs/wiki/index.md)
 
 ```markdown
 # Wiki Index
@@ -196,7 +196,7 @@ related: [[related-page-1]], [[related-page-2]]
 - [[comparisons/x-vs-y]] - Brief description
 ```
 
-### Log Format (log.md)
+### Log Format (docs/log.md)
 
 ```markdown
 ## [2026-04-07 10:30] ingest | Article Title
@@ -223,10 +223,10 @@ For large wikis (>100 sources), use qmd for search instead of index.md.
 
 ```bash
 # Search wiki pages
-qmd search "query text" --path wiki/
+qmd search "query text" --path docs/wiki/
 
 # With re-ranking
-qmd search "query text" --path wiki/ --rerank
+qmd search "query text" --path docs/wiki/ --rerank
 ```
 
 Read `references/qmd-integration.md` for setup instructions.
@@ -237,7 +237,7 @@ Read `references/qmd-integration.md` for setup instructions.
 
 ```dataview
 TABLE type, created, sources
-FROM "wiki/entities"
+FROM "docs/wiki/entities"
 WHERE contains(tags, "important")
 SORT created DESC
 ```
@@ -329,11 +329,11 @@ workflow:
 
 2. **Configure WIKI.md** for your domain
 
-3. **Add sources to raw/** directory
+3. **Add sources to docs/raw/** directory
 
 4. **Ingest first source**:
    ```
-   "Ingest raw/articles/first-article.md"
+   "Ingest docs/raw/articles/first-article.md"
    ```
 
 5. **Query wiki**:
@@ -353,7 +353,7 @@ workflow:
 3. **Write back good queries** — don't let insights disappear
 4. **Lint weekly** — catch issues before they compound
 5. **Use tags consistently** — enables Dataview queries
-6. **Keep sources in raw/** immutable — wiki is the mutable layer
+6. **Keep sources in docs/raw/** immutable — wiki is the mutable layer
 7. **Git commit after each ingest** — version history is free
 
 ## The Key Difference

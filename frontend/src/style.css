@@ -110,3 +110,30 @@ body {
   background: #f5f8ff;
   border-color: #dce5ff;
 }
+
+/* Drawer / Modal 标题蓝色矩形装饰 */
+.ant-drawer-header .ant-drawer-title,
+.ant-modal-header .ant-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ant-drawer-header .ant-drawer-title::before,
+.ant-modal-header .ant-modal-title::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  border-radius: 999px;
+  background: #1677ff;
+  flex-shrink: 0;
+}
+
+/* 表单按钮区域统一右对齐 */
+.ant-modal-body .ant-form > .ant-form-item:last-child .ant-form-item-control-input-content,
+.ant-drawer-body .ant-form > .ant-form-item:last-child .ant-form-item-control-input-content {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
