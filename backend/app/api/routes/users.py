@@ -12,9 +12,9 @@ from app.schemas.common import ListResponse
 from app.schemas.role import StatusUpdateRequest
 from app.schemas.user import CreateUserResponse, RoleSummary, UserCreateRequest, UserListItem, UserUpdateRequest
 from app.services.audit import write_operation_log
-from app.services.auth import current_active_user
+from app.services.auth import SlidingRedisStrategy, current_active_user, get_redis_strategy
 from app.services.authorization import require_permission
-from app.services.system_users import create_temporary_password, delete_user_or_raise
+from app.services.system_users import create_temporary_password, delete_user_or_raise, reset_password_for_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 password_hash = PasswordHash.recommended()
@@ -234,3 +234,36 @@ async def update_user_status(
     )
     await session.commit()
     return {"message": "状态更新成功"}
+
+
+@router.post("/{user_id}/reset-password")
+async def reset_user_password(
+    user_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    user: User = Depends(require_permission("user:reset-password")),
+    strategy: SlidingRedisStrategy = Depends(get_redis_strategy),
+) -> dict:
+    target = await session.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+
+    temporary_password = reset_password_for_user(target)
+    session.add(target)
+    await session.flush()
+
+    await strategy.destroy_user_tokens(target.id)
+
+    await write_operation_log(
+        session,
+        operator_id=user.id,
+        operator_name=user.username,
+        module="用户管理",
+        action="重置用户密码",
+        method="POST",
+        result="成功",
+        detail=f"重置用户 {target.username} 的密码",
+        ip=request.client.host if request.client else "",
+    )
+    await session.commit()
+    return {"message": "密码重置成功", "temporaryPassword": temporary_password}
