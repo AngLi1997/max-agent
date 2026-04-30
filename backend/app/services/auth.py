@@ -25,11 +25,44 @@ async def get_user_manager(user_db=Depends(get_user_db)) -> AsyncGenerator[UserM
 
 
 class SlidingRedisStrategy(RedisStrategy[User, int]):
+
+    def _user_tokens_key(self, user_id: int) -> str:
+        return f"max_agent_user_tokens:{user_id}"
+
+    async def write_token(self, user: User) -> str:
+        token = await super().write_token(user)
+        user_key = self._user_tokens_key(user.id)
+        await self.redis.sadd(user_key, token)
+        if self.lifetime_seconds is not None:
+            await self.redis.expire(user_key, self.lifetime_seconds)
+        return token
+
     async def read_token(self, token: str | None, user_manager: BaseUserManager[User, int]) -> User | None:
         user = await super().read_token(token, user_manager)
         if user is not None and token is not None and self.lifetime_seconds is not None:
             await self.redis.expire(f"{self.key_prefix}{token}", self.lifetime_seconds)
         return user
+
+    async def destroy_token(self, token: str, user: User) -> None:
+        await super().destroy_token(token, user)
+        user_key = self._user_tokens_key(user.id)
+        await self.redis.srem(user_key, token)
+        remaining = await self.redis.scard(user_key)
+        if remaining == 0:
+            await self.redis.delete(user_key)
+        elif self.lifetime_seconds is not None:
+            await self.redis.expire(user_key, self.lifetime_seconds)
+
+    async def destroy_user_tokens(self, user_id: int) -> None:
+        user_key = self._user_tokens_key(user_id)
+        tokens = await self.redis.smembers(user_key)
+        if tokens:
+            token_keys = [
+                f"{self.key_prefix}{t.decode() if isinstance(t, bytes) else t}"
+                for t in tokens
+            ]
+            await self.redis.delete(*token_keys)
+        await self.redis.delete(user_key)
 
 
 bearer_transport = BearerTransport(tokenUrl=f"{settings.api_prefix}/auth/login")
