@@ -91,3 +91,12 @@ export function deleteUserApi(id: number) {
 export function updateUserStatusApi(id: number, status: string) {
   return request.patch(`/users/${id}/status`, { status }) as Promise<{ message: string }>
 }
+
+export interface ResetPasswordResponse {
+  message: string
+  temporaryPassword: string
+}
+
+export function resetPasswordApi(id: number) {
+  return request.post(`/users/${id}/reset-password`) as Promise<ResetPasswordResponse>
+}

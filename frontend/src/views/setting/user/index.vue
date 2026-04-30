@@ -63,6 +63,7 @@
                 <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
                   <a-menu-item v-if="canEdit" key="edit"><EditOutlined /> 编辑</a-menu-item>
                   <a-menu-item v-if="canDelete && !record.isBuiltin" key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
+                  <a-menu-item v-if="canResetPassword" key="resetPassword"><KeyOutlined /> 重置密码</a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -103,7 +104,7 @@ defineOptions({ name: 'SettingUser' })
 
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
 import { useTableScrollY } from '@/composables/useTableScrollY'
 import { useUserStore } from '@/stores/user'
@@ -113,6 +114,7 @@ import {
   updateUserApi,
   deleteUserApi,
   updateUserStatusApi,
+  resetPasswordApi,
   type UserListItem,
 } from '@/api/user'
 import { getRoleListApi } from '@/api/role'
@@ -125,6 +127,7 @@ const canCreate = computed(() => userStore.hasPermission('user:create'))
 const canEdit = computed(() => userStore.hasPermission('user:update'))
 const canDelete = computed(() => userStore.hasPermission('user:delete'))
 const canStatus = computed(() => userStore.hasPermission('user:status'))
+const canResetPassword = computed(() => userStore.hasPermission('user:reset-password'))
 
 const columns = [
   { title: '用户名', dataIndex: 'username', key: 'username', width: 120, ellipsis: { showTitle: true } },
@@ -202,9 +205,29 @@ function handleDelete(record: UserListItem) {
     title: '确认删除',
     content: `确定要删除用户「${record.username}」吗？`,
     okType: 'danger',
+    okText: '删除',
+    cancelText: '取消',
     async onOk() {
       await deleteUserApi(record.id)
       message.success('删除成功')
+      fetchData()
+    },
+  })
+}
+
+function handleResetPassword(record: UserListItem) {
+  Modal.confirm({
+    title: '确认重置密码',
+    content: `确定要重置用户「${record.username}」的密码吗？重置后该用户当前登录态将立即失效。`,
+    okType: 'danger',
+    okText: '重置',
+    cancelText: '取消',
+    async onOk() {
+      const res = await resetPasswordApi(record.id)
+      Modal.success({
+        title: '密码重置成功',
+        content: `新临时密码：${res.temporaryPassword}\n请妥善保存，该用户下次登录后需要立即修改密码。`,
+      })
       fetchData()
     },
   })
@@ -218,6 +241,7 @@ function handleMenuClick(key: string, record: UserListItem) {
   switch (key) {
     case 'edit': handleEdit(record); break
     case 'delete': handleDelete(record); break
+    case 'resetPassword': handleResetPassword(record); break
   }
 }
 
