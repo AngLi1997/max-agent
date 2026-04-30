@@ -9,3 +9,8 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     token: str
     username: str
+
+
+class ChangePasswordRequest(BaseModel):
+    oldPassword: str
+    newPassword: str

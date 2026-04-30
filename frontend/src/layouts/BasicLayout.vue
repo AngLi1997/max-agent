@@ -24,6 +24,21 @@ import {
   MenuUnfoldOutlined,
 } from '@ant-design/icons-vue'
 
+const iconMap: Record<string, any> = {
+  DashboardOutlined,
+  RobotOutlined,
+  ThunderboltOutlined,
+  ToolOutlined,
+  SettingOutlined,
+  UserOutlined,
+  TeamOutlined,
+  SafetyCertificateOutlined,
+  MenuOutlined,
+  ControlOutlined,
+  FileTextOutlined,
+  LoginOutlined,
+}
+
 const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
@@ -73,54 +88,26 @@ async function handleLogout() {
         v-model:open-keys="openKeys"
         @click="handleMenuClick"
       >
-        <a-menu-item key="/dashboard">
-          <template #icon><DashboardOutlined /></template>
-          仪表盘
-        </a-menu-item>
-        <a-menu-item key="/model">
-          <template #icon><RobotOutlined /></template>
-          模型管理
-        </a-menu-item>
-        <a-menu-item key="/skill">
-          <template #icon><ThunderboltOutlined /></template>
-          Skills 管理
-        </a-menu-item>
-        <a-menu-item key="/tool">
-          <template #icon><ToolOutlined /></template>
-          工具管理
-        </a-menu-item>
-        <a-sub-menu key="/setting">
-          <template #icon><SettingOutlined /></template>
-          <template #title>系统设置</template>
-          <a-menu-item key="/setting/user">
-            <template #icon><UserOutlined /></template>
-            用户管理
+        <template v-for="menu in userStore.menus" :key="menu.path">
+          <a-sub-menu v-if="menu.children && menu.children.length > 0" :key="menu.path">
+            <template #icon>
+              <component :is="iconMap[menu.icon]" v-if="menu.icon && iconMap[menu.icon]" />
+            </template>
+            <template #title>{{ menu.name }}</template>
+            <a-menu-item v-for="child in menu.children" :key="child.path">
+              <template #icon>
+                <component :is="iconMap[child.icon]" v-if="child.icon && iconMap[child.icon]" />
+              </template>
+              {{ child.name }}
+            </a-menu-item>
+          </a-sub-menu>
+          <a-menu-item v-else :key="menu.path">
+            <template #icon>
+              <component :is="iconMap[menu.icon]" v-if="menu.icon && iconMap[menu.icon]" />
+            </template>
+            {{ menu.name }}
           </a-menu-item>
-          <a-menu-item key="/setting/role">
-            <template #icon><TeamOutlined /></template>
-            角色管理
-          </a-menu-item>
-          <a-menu-item key="/setting/permission">
-            <template #icon><SafetyCertificateOutlined /></template>
-            权限管理
-          </a-menu-item>
-          <a-menu-item key="/setting/menu">
-            <template #icon><MenuOutlined /></template>
-            菜单配置
-          </a-menu-item>
-          <a-menu-item key="/setting/config">
-            <template #icon><ControlOutlined /></template>
-            系统配置
-          </a-menu-item>
-          <a-menu-item key="/setting/operation-log">
-            <template #icon><FileTextOutlined /></template>
-            操作日志
-          </a-menu-item>
-          <a-menu-item key="/setting/login-log">
-            <template #icon><LoginOutlined /></template>
-            登录日志
-          </a-menu-item>
-        </a-sub-menu>
+        </template>
       </a-menu>
     </a-layout-sider>
     <a-layout>

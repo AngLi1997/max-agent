@@ -41,7 +41,7 @@
               </a-button>
               <template #overlay>
                 <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
-                  <a-menu-item key="detail"><EyeOutlined /> 查看详情</a-menu-item>
+                  <a-menu-item v-if="canRead" key="detail"><EyeOutlined /> 查看详情</a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -70,9 +70,10 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingLoginLog' })
 
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { EyeOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useUserStore } from '@/stores/user'
 import { getLoginLogApi, type LoginLogItem } from '../../../api/log'
 
 const columns = [
@@ -91,6 +92,8 @@ const total = ref(0)
 const detailVisible = ref(false)
 const currentDetail = ref<LoginLogItem | null>(null)
 const { drawerWidth } = useDrawerWidth()
+const userStore = useUserStore()
+const canRead = computed(() => userStore.hasPermission('login-log:read'))
 
 const searchForm = reactive({
   username: '',
@@ -133,5 +136,7 @@ function handleViewDetail(record: LoginLogItem) {
   detailVisible.value = true
 }
 
-onMounted(fetchData)
+onMounted(() => {
+  if (canRead.value) fetchData()
+})
 </script>

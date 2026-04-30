@@ -20,7 +20,7 @@
 
     <a-card title="用户列表">
       <template #extra>
-        <a-button type="primary" @click="handleAdd">
+        <a-button v-if="canCreate" type="primary" @click="handleAdd">
           <template #icon><PlusOutlined /></template>
           新增用户
         </a-button>
@@ -34,13 +34,20 @@
         row-key="id"
       >
         <template #bodyCell="{ column, record }">
+          <template v-if="column.dataIndex === 'roles'">
+            {{ record.roles.map((item: { name: string }) => item.name).join('、') }}
+          </template>
           <template v-if="column.dataIndex === 'status'">
             <a-switch
               :checked="record.status === 'active'"
               checked-children="启用"
               un-checked-children="停用"
+              :disabled="!canStatus"
               @change="handleStatusChange(record)"
             />
+          </template>
+          <template v-if="column.dataIndex === 'isBuiltin'">
+            <a-tag :color="record.isBuiltin ? 'blue' : 'default'">{{ record.isBuiltin ? '是' : '否' }}</a-tag>
           </template>
           <template v-if="column.key === 'action'">
             <a-dropdown>
@@ -49,8 +56,8 @@
               </a-button>
               <template #overlay>
                 <a-menu @click="(info: { key: string }) => handleActionMenuClick(info, record)">
-                  <a-menu-item key="edit"><EditOutlined /> 编辑</a-menu-item>
-                  <a-menu-item key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
+                  <a-menu-item v-if="canEdit" key="edit"><EditOutlined /> 编辑</a-menu-item>
+                  <a-menu-item v-if="canDelete && !record.isBuiltin" key="delete" danger><DeleteOutlined /> 删除</a-menu-item>
                 </a-menu>
               </template>
             </a-dropdown>
@@ -73,11 +80,7 @@
           <a-input v-model:value="formState.email" placeholder="请输入邮箱" />
         </a-form-item>
         <a-form-item label="角色" required>
-          <a-select v-model:value="formState.role" placeholder="请选择角色">
-            <a-select-option value="超级管理员">超级管理员</a-select-option>
-            <a-select-option value="编辑">编辑</a-select-option>
-            <a-select-option value="访客">访客</a-select-option>
-          </a-select>
+          <a-select v-model:value="formState.roleIds" mode="multiple" placeholder="请选择角色" :options="roleOptions" />
         </a-form-item>
       </a-form>
       <template #footer>
@@ -93,68 +96,70 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingUser' })
 
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useUserStore } from '@/stores/user'
+import {
+  getUserListApi,
+  createUserApi,
+  updateUserApi,
+  deleteUserApi,
+  updateUserStatusApi,
+  type UserListItem,
+} from '@/api/user'
+import { getRoleListApi } from '@/api/role'
 
 const { drawerWidth } = useDrawerWidth()
+const userStore = useUserStore()
 
-interface UserItem {
-  id: number
-  username: string
-  email: string
-  role: string
-  status: 'active' | 'inactive'
-  createdAt: string
-}
-
-const mockData: UserItem[] = [
-  { id: 1, username: 'admin', email: 'admin@example.com', role: '超级管理员', status: 'active', createdAt: '2024-01-01 10:00:00' },
-  { id: 2, username: 'editor', email: 'editor@example.com', role: '编辑', status: 'active', createdAt: '2024-02-01 10:00:00' },
-  { id: 3, username: 'viewer', email: 'viewer@example.com', role: '访客', status: 'inactive', createdAt: '2024-03-01 10:00:00' },
-]
-let nextId = 4
+const canCreate = computed(() => userStore.hasPermission('user:create'))
+const canEdit = computed(() => userStore.hasPermission('user:update'))
+const canDelete = computed(() => userStore.hasPermission('user:delete'))
+const canStatus = computed(() => userStore.hasPermission('user:status'))
 
 const columns = [
   { title: '用户名', dataIndex: 'username', key: 'username' },
   { title: '邮箱', dataIndex: 'email', key: 'email' },
-  { title: '角色', dataIndex: 'role', key: 'role' },
+  { title: '角色', dataIndex: 'roles', key: 'roles' },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
+  { title: '内置用户', dataIndex: 'isBuiltin', key: 'isBuiltin', width: 100, align: 'center' as const },
   { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt' },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
 const loading = ref(false)
-const dataSource = ref<UserItem[]>([])
+const dataSource = ref<UserListItem[]>([])
 const total = ref(0)
 const drawerVisible = ref(false)
 const drawerTitle = ref('新增用户')
 const editingId = ref<number | null>(null)
 const submitLoading = ref(false)
+const roleOptions = ref<{ label: string; value: number }[]>([])
 
 const searchForm = reactive({ username: '', status: undefined as string | undefined })
 const formState = reactive({
   username: '',
   email: '',
-  role: undefined as string | undefined,
+  roleIds: [] as number[],
   status: undefined as 'active' | 'inactive' | undefined,
 })
 
-function fetchData() {
+async function fetchRoleOptions() {
+  const res = await getRoleListApi({})
+  roleOptions.value = res.list.map((item) => ({ label: item.name, value: item.id }))
+}
+
+async function fetchData() {
   loading.value = true
-  setTimeout(() => {
-    let list = [...mockData]
-    if (searchForm.username) {
-      list = list.filter((item) => item.username.includes(searchForm.username))
-    }
-    if (searchForm.status) {
-      list = list.filter((item) => item.status === searchForm.status)
-    }
-    dataSource.value = list
-    total.value = list.length
+  try {
+    const res = await getUserListApi({ username: searchForm.username, status: searchForm.status })
+    dataSource.value = res.list
+    total.value = res.total
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 function handleReset() {
@@ -168,90 +173,89 @@ function handleAdd() {
   drawerTitle.value = '新增用户'
   formState.username = ''
   formState.email = ''
-  formState.role = undefined
+  formState.roleIds = []
   formState.status = undefined
   drawerVisible.value = true
 }
 
-function handleEdit(record: UserItem) {
+function handleEdit(record: UserListItem) {
   editingId.value = record.id
   drawerTitle.value = '编辑用户'
   formState.username = record.username
   formState.email = record.email
-  formState.role = record.role
+  formState.roleIds = [...record.roleIds]
   formState.status = record.status
   drawerVisible.value = true
 }
 
-function handleDelete(record: UserItem) {
+function handleDelete(record: UserListItem) {
   Modal.confirm({
     title: '确认删除',
     content: `确定要删除用户「${record.username}」吗？`,
     okType: 'danger',
-    onOk() {
-      const index = mockData.findIndex((item) => item.id === record.id)
-      if (index !== -1) mockData.splice(index, 1)
+    async onOk() {
+      await deleteUserApi(record.id)
       message.success('删除成功')
       fetchData()
     },
   })
 }
 
-function handleActionMenuClick({ key }: { key: string }, record: UserItem) {
+function handleActionMenuClick({ key }: { key: string }, record: UserListItem) {
   handleMenuClick(key, record)
 }
 
-function handleMenuClick(key: string, record: UserItem) {
+function handleMenuClick(key: string, record: UserListItem) {
   switch (key) {
     case 'edit': handleEdit(record); break
     case 'delete': handleDelete(record); break
   }
 }
 
-function handleStatusChange(record: UserItem) {
+async function handleStatusChange(record: UserListItem) {
   const newStatus = record.status === 'active' ? 'inactive' : 'active'
-  const index = mockData.findIndex((item) => item.id === record.id)
-  if (index !== -1) {
-    mockData[index].status = newStatus
-    record.status = newStatus
+  try {
+    await updateUserStatusApi(record.id, newStatus)
+    message.success('状态更新成功')
+    await fetchData()
+  } catch {
+    message.error('状态更新失败')
   }
-  message.success('状态更新成功')
-  fetchData()
 }
 
-function handleSubmit() {
-  if (!formState.username || !formState.email || !formState.role) {
+async function handleSubmit() {
+  if (!formState.username || !formState.email || formState.roleIds.length === 0) {
     message.warning('请填写完整信息')
     return
   }
   submitLoading.value = true
-  const data = { ...formState }
-  if (editingId.value === null && !data.status) {
-    data.status = 'inactive'
-  }
-  setTimeout(() => {
+  try {
+    const status = (editingId.value !== null ? formState.status : (formState.status ?? 'inactive')) ?? 'inactive'
+    const data = {
+      username: formState.username,
+      email: formState.email,
+      roleIds: formState.roleIds,
+      status,
+    }
     if (editingId.value !== null) {
-      const index = mockData.findIndex((item) => item.id === editingId.value)
-      if (index !== -1) {
-        mockData[index] = { ...mockData[index], username: data.username, email: data.email, role: data.role!, status: data.status as 'active' | 'inactive' }
-      }
+      await updateUserApi(editingId.value, data)
       message.success('更新成功')
     } else {
-      mockData.push({
-        id: nextId++,
-        username: data.username,
-        email: data.email,
-        role: data.role!,
-        status: data.status as 'active' | 'inactive',
-        createdAt: new Date().toLocaleString('zh-CN').replace(/\//g, '-'),
-      })
+      const res = await createUserApi(data)
       message.success('创建成功')
+      Modal.success({
+        title: '用户创建成功',
+        content: `临时密码：${res.temporaryPassword}`,
+      })
     }
-    submitLoading.value = false
     drawerVisible.value = false
     fetchData()
-  }, 300)
+  } finally {
+    submitLoading.value = false
+  }
 }
 
-onMounted(fetchData)
+onMounted(async () => {
+  await Promise.all([fetchRoleOptions(), fetchData()])
+})
 </script>
