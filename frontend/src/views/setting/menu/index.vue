@@ -204,6 +204,8 @@ function handleDelete(record: MenuItem) {
     title: '确认删除',
     content: `确定要删除菜单「${record.name}」吗？`,
     okType: 'danger',
+    okText: '删除',
+    cancelText: '取消',
     async onOk() {
       await deleteMenuApi(record.id)
       message.success('删除成功')

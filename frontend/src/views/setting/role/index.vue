@@ -240,6 +240,8 @@ function handleDelete(record: RoleItem) {
     title: '确认删除',
     content: `确定要删除角色「${record.name}」吗？`,
     okType: 'danger',
+    okText: '删除',
+    cancelText: '取消',
     async onOk() {
       await deleteRoleApi(record.id)
       message.success('删除成功')

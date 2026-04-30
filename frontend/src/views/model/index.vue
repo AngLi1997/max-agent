@@ -171,6 +171,8 @@ function handleDelete(record: ModelItem) {
     title: '确认删除',
     content: `确定要删除模型「${record.name}」吗？`,
     okType: 'danger',
+    okText: '删除',
+    cancelText: '取消',
     async onOk() {
       await deleteModelApi(record.id)
       message.success('删除成功')

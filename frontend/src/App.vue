@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import ForcePasswordChangeModal from './components/ForcePasswordChangeModal.vue'
 import { useUserStore } from './stores/user'
 import { logoutApi } from './api/user'
@@ -20,10 +21,12 @@ async function handleLogout() {
 </script>
 
 <template>
-  <router-view />
-  <ForcePasswordChangeModal
+  <a-config-provider :locale="zhCN">
+    <router-view />
+    <ForcePasswordChangeModal
     :open="userStore.mustChangePassword"
     @success="userStore.mustChangePassword = false"
     @logout="handleLogout"
   />
+  </a-config-provider>
 </template>
