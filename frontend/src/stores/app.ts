@@ -3,10 +3,11 @@ import { ref } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
   const sidebarCollapsed = ref(false)
+  const pageTitleAccent = ref('#1677ff')
 
   function toggleSidebar() {
     sidebarCollapsed.value = !sidebarCollapsed.value
   }
 
-  return { sidebarCollapsed, toggleSidebar }
+  return { sidebarCollapsed, pageTitleAccent, toggleSidebar }
 })

@@ -1,37 +1,40 @@
 <template>
-  <div>
-    <a-card style="margin-bottom: 16px">
-      <a-form layout="inline" :model="searchForm">
-        <a-form-item label="用户名">
-          <a-input v-model:value="searchForm.username" placeholder="请输入用户名" allow-clear style="width: 200px" />
-        </a-form-item>
-        <a-form-item label="状态">
-          <a-select v-model:value="searchForm.status" placeholder="请选择状态" allow-clear style="width: 160px">
-            <a-select-option value="active">启用</a-select-option>
-            <a-select-option value="inactive">禁用</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="fetchData">查询</a-button>
-          <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
+  <div class="page-container">
+    <div class="page-section">
+      <div class="page-toolbar">
+        <a-form layout="inline" :model="searchForm">
+          <a-form-item label="用户名">
+            <a-input v-model:value="searchForm.username" placeholder="请输入用户名" allow-clear style="width: 200px" />
+          </a-form-item>
+          <a-form-item label="状态">
+            <a-select v-model:value="searchForm.status" placeholder="请选择状态" allow-clear style="width: 160px">
+              <a-select-option value="active">启用</a-select-option>
+              <a-select-option value="inactive">禁用</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="fetchData">查询</a-button>
+            <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
+          </a-form-item>
+        </a-form>
+        <div v-if="canCreate" class="page-toolbar-actions">
+          <a-button type="primary" @click="handleAdd">
+            <template #icon><PlusOutlined /></template>
+            新增用户
+          </a-button>
+        </div>
+      </div>
+    </div>
 
-    <a-card title="用户列表">
-      <template #extra>
-        <a-button v-if="canCreate" type="primary" @click="handleAdd">
-          <template #icon><PlusOutlined /></template>
-          新增用户
-        </a-button>
-      </template>
+    <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
       <a-table
-        size="small"
+        size="middle"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
         :pagination="{ total, pageSize: 10, showTotal: (t: number) => `共 ${t} 条` }"
         row-key="id"
+        :scroll="{ y: tableScroll.tableScrollY }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'roles'">
@@ -47,7 +50,9 @@
             />
           </template>
           <template v-if="column.dataIndex === 'isBuiltin'">
-            <a-tag :color="record.isBuiltin ? 'blue' : 'default'">{{ record.isBuiltin ? '是' : '否' }}</a-tag>
+            <a-tag :class="record.isBuiltin ? 'page-status-tag' : 'page-status-tag page-status-tag--muted'">
+              {{ record.isBuiltin ? '是' : '否' }}
+            </a-tag>
           </template>
           <template v-if="column.key === 'action'">
             <a-dropdown>
@@ -64,7 +69,7 @@
           </template>
         </template>
       </a-table>
-    </a-card>
+    </div>
 
     <a-drawer
       :title="drawerTitle"
@@ -96,10 +101,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingUser' })
 
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useTableScrollY } from '@/composables/useTableScrollY'
 import { useUserStore } from '@/stores/user'
 import {
   getUserListApi,
@@ -112,6 +118,7 @@ import {
 import { getRoleListApi } from '@/api/role'
 
 const { drawerWidth } = useDrawerWidth()
+const tableScroll = useTableScrollY()
 const userStore = useUserStore()
 
 const canCreate = computed(() => userStore.hasPermission('user:create'))
@@ -120,12 +127,12 @@ const canDelete = computed(() => userStore.hasPermission('user:delete'))
 const canStatus = computed(() => userStore.hasPermission('user:status'))
 
 const columns = [
-  { title: '用户名', dataIndex: 'username', key: 'username' },
-  { title: '邮箱', dataIndex: 'email', key: 'email' },
-  { title: '角色', dataIndex: 'roles', key: 'roles' },
+  { title: '用户名', dataIndex: 'username', key: 'username', width: 120, ellipsis: { showTitle: true } },
+  { title: '邮箱', dataIndex: 'email', key: 'email', width: 180, ellipsis: { showTitle: true } },
+  { title: '角色', dataIndex: 'roles', key: 'roles', width: 150, ellipsis: { showTitle: true } },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
   { title: '内置用户', dataIndex: 'isBuiltin', key: 'isBuiltin', width: 100, align: 'center' as const },
-  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt' },
+  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180, ellipsis: { showTitle: true } },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
@@ -159,6 +166,8 @@ async function fetchData() {
     total.value = res.total
   } finally {
     loading.value = false
+    await nextTick()
+    tableScroll.updateTableScrollY()
   }
 }
 

@@ -48,6 +48,12 @@ const tabStore = useTabStore()
 const selectedKeys = computed(() => [route.path])
 const openKeys = ref<string[]>(['/setting'])
 
+// 页面标题与强调色：保持由路由 meta 驱动（用于页面壳层 header 展示）
+const currentPageTitle = computed(() => (route.meta?.title as string) || '')
+const pageAccentStyle = computed(() => ({
+  '--page-title-accent': ((route.meta as any)?.accent as string) || '#1677ff',
+}))
+
 watch(() => route.path, () => {
   tabStore.syncRoute(route)
 }, { immediate: true })
@@ -69,7 +75,7 @@ async function handleLogout() {
 </script>
 
 <template>
-  <a-layout style="min-height: 100vh">
+  <a-layout style="height: 100vh; overflow: hidden">
     <a-layout-sider
       v-model:collapsed="appStore.sidebarCollapsed"
       collapsible
@@ -110,7 +116,7 @@ async function handleLogout() {
         </template>
       </a-menu>
     </a-layout-sider>
-    <a-layout>
+    <a-layout style="min-height: 0; overflow: hidden">
       <a-layout-header style="background: #fff; padding: 0 24px; display: flex; align-items: center; justify-content: space-between;">
         <component
           :is="appStore.sidebarCollapsed ? MenuUnfoldOutlined : MenuFoldOutlined"
@@ -134,16 +140,88 @@ async function handleLogout() {
           </template>
         </a-dropdown>
       </a-layout-header>
-      <a-layout-content style="margin: 16px; padding: 0; background: #fff; border-radius: 8px; min-height: 280px; overflow: hidden;">
-        <TabBar />
-        <div style="padding: 24px;">
-          <router-view v-slot="{ Component }">
-            <keep-alive :include="tabStore.cachedNames">
-              <component :is="Component" />
-            </keep-alive>
-          </router-view>
+      <TabBar class="layout-tabbar" />
+      <a-layout-content class="layout-content-shell">
+        <div class="workspace-shell">
+          <div class="page-shell">
+            <div v-if="currentPageTitle" class="page-shell-header">
+              <span class="page-shell-accent" :style="pageAccentStyle"></span>
+              <span class="page-shell-title">{{ currentPageTitle }}</span>
+            </div>
+            <div class="page-shell-body">
+              <router-view v-slot="{ Component }">
+                <keep-alive :include="tabStore.cachedNames">
+                  <component :is="Component" />
+                </keep-alive>
+              </router-view>
+            </div>
+          </div>
         </div>
       </a-layout-content>
     </a-layout>
   </a-layout>
 </template>
+
+<style scoped>
+.layout-tabbar {
+  margin: 12px 16px 0;
+  background: transparent;
+}
+
+.layout-content-shell {
+  margin: 0 16px 16px;
+  min-height: 0;
+  display: flex;
+}
+
+.workspace-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #e7edf6;
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+}
+
+.page-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-shell-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f2f4f7;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+}
+
+.page-shell-accent {
+  width: 4px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--page-title-accent);
+  flex-shrink: 0;
+}
+
+.page-shell-title {
+  line-height: 1.2;
+}
+
+.page-shell-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+}
+</style>

@@ -48,7 +48,7 @@ async def list_permissions(
             identifier=p.identifier,
             type=p.type,
             status=p.status,
-            createdAt=p.created_at.isoformat(sep=" ", timespec="seconds"),
+            createdAt=p.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         )
         for p in rows
     ]
@@ -93,7 +93,7 @@ async def create_permission(
         identifier=perm.identifier,
         type=perm.type,
         status=perm.status,
-        createdAt=perm.created_at.isoformat(sep=" ", timespec="seconds"),
+        createdAt=perm.created_at.strftime("%Y-%m-%d %H:%M:%S"),
     )
 
 
@@ -136,7 +136,7 @@ async def update_permission(
         identifier=perm.identifier,
         type=perm.type,
         status=perm.status,
-        createdAt=perm.created_at.isoformat(sep=" ", timespec="seconds"),
+        createdAt=perm.created_at.strftime("%Y-%m-%d %H:%M:%S"),
     )
 
 

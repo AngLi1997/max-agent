@@ -1,12 +1,18 @@
 <template>
-  <div>
-    <a-card title="菜单列表">
-      <template #extra>
-        <a-button v-if="canCreate" type="primary" @click="handleAdd">
-          <template #icon><PlusOutlined /></template>
-          新增菜单
-        </a-button>
-      </template>
+  <div class="page-container">
+    <div class="page-section">
+      <div class="page-toolbar">
+        <div></div>
+        <div v-if="canCreate" class="page-toolbar-actions">
+          <a-button type="primary" @click="handleAdd">
+            <template #icon><PlusOutlined /></template>
+            新增菜单
+          </a-button>
+        </div>
+      </div>
+    </div>
+
+    <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
       <a-table
         :columns="columns"
         :data-source="dataSource"
@@ -14,7 +20,8 @@
         row-key="id"
         :pagination="false"
         childrenColumnName="children"
-        size="small"
+        size="middle"
+        :scroll="{ y: tableScroll.tableScrollY }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
@@ -43,7 +50,7 @@
           </template>
         </template>
       </a-table>
-    </a-card>
+    </div>
 
     <a-drawer
       :title="drawerTitle"
@@ -95,14 +102,16 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingMenu' })
 
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { getMenuTreeApi, createMenuApi, updateMenuApi, deleteMenuApi, updateMenuStatusApi, type MenuItem } from '../../../api/menu'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useTableScrollY } from '@/composables/useTableScrollY'
 import { useUserStore } from '@/stores/user'
 
 const { drawerWidth } = useDrawerWidth()
+const tableScroll = useTableScrollY()
 const userStore = useUserStore()
 
 const canCreate = computed(() => userStore.hasPermission('menu:create'))
@@ -111,9 +120,9 @@ const canDelete = computed(() => userStore.hasPermission('menu:delete'))
 const canStatus = computed(() => userStore.hasPermission('menu:status'))
 
 const columns = [
-  { title: '菜单名称', dataIndex: 'name', key: 'name' },
-  { title: '路由', dataIndex: 'path', key: 'path' },
-  { title: '权限标识', dataIndex: 'permission', key: 'permission' },
+  { title: '菜单名称', dataIndex: 'name', key: 'name', width: 180, ellipsis: { showTitle: true } },
+  { title: '路由', dataIndex: 'path', key: 'path', width: 180, ellipsis: { showTitle: true } },
+  { title: '权限标识', dataIndex: 'permission', key: 'permission', width: 150, ellipsis: { showTitle: true } },
   { title: '排序', dataIndex: 'sort', key: 'sort', width: 80 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
@@ -145,6 +154,8 @@ async function fetchData() {
     dataSource.value = await getMenuTreeApi()
   } finally {
     loading.value = false
+    await nextTick()
+    tableScroll.updateTableScrollY()
   }
 }
 

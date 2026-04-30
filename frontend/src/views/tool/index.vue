@@ -1,38 +1,41 @@
 <template>
-  <div>
-    <a-card style="margin-bottom: 16px">
-      <a-form layout="inline" :model="searchForm">
-        <a-form-item label="名称">
-          <a-input v-model:value="searchForm.name" placeholder="请输入工具名称" allow-clear style="width: 200px" />
-        </a-form-item>
-        <a-form-item label="类型">
-          <a-select v-model:value="searchForm.type" placeholder="请选择类型" allow-clear style="width: 140px">
-            <a-select-option value="搜索">搜索</a-select-option>
-            <a-select-option value="执行">执行</a-select-option>
-            <a-select-option value="文件">文件</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="fetchData">查询</a-button>
-          <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
+  <div class="page-container">
+    <div class="page-section">
+      <div class="page-toolbar">
+        <a-form layout="inline" :model="searchForm">
+          <a-form-item label="名称">
+            <a-input v-model:value="searchForm.name" placeholder="请输入工具名称" allow-clear style="width: 200px" />
+          </a-form-item>
+          <a-form-item label="类型">
+            <a-select v-model:value="searchForm.type" placeholder="请选择类型" allow-clear style="width: 140px">
+              <a-select-option value="搜索">搜索</a-select-option>
+              <a-select-option value="执行">执行</a-select-option>
+              <a-select-option value="文件">文件</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="fetchData">查询</a-button>
+            <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
+          </a-form-item>
+        </a-form>
+        <div class="page-toolbar-actions">
+          <a-button type="primary" @click="handleAdd">
+            <template #icon><PlusOutlined /></template>
+            新增工具
+          </a-button>
+        </div>
+      </div>
+    </div>
 
-    <a-card title="工具列表">
-      <template #extra>
-        <a-button type="primary" @click="handleAdd">
-          <template #icon><PlusOutlined /></template>
-          新增工具
-        </a-button>
-      </template>
+    <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
       <a-table
-        size="small"
+        size="middle"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
         :pagination="{ total, pageSize: 10, showTotal: (t: number) => `共 ${t} 条` }"
         row-key="id"
+        :scroll="{ y: tableScroll.tableScrollY }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'status'">
@@ -58,7 +61,7 @@
           </template>
         </template>
       </a-table>
-    </a-card>
+    </div>
 
     <a-drawer
       :title="drawerTitle"
@@ -91,10 +94,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'Tool' })
 
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useTableScrollY } from '@/composables/useTableScrollY'
 import {
   getToolListApi,
   createToolApi,
@@ -104,10 +108,10 @@ import {
 } from '../../api/tool'
 
 const columns = [
-  { title: '名称', dataIndex: 'name', key: 'name', width: 160 },
-  { title: '类型', dataIndex: 'type', key: 'type', width: 100 },
+  { title: '名称', dataIndex: 'name', key: 'name', width: 160, ellipsis: { showTitle: true } },
+  { title: '类型', dataIndex: 'type', key: 'type', width: 100, ellipsis: { showTitle: true } },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
-  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
+  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180, ellipsis: { showTitle: true } },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
@@ -119,6 +123,7 @@ const drawerTitle = ref('新增工具')
 const editingId = ref<number | null>(null)
 const submitLoading = ref(false)
 const { drawerWidth } = useDrawerWidth()
+const tableScroll = useTableScrollY()
 
 const searchForm = reactive({ name: '', type: undefined as '搜索' | '执行' | '文件' | undefined })
 const formState = reactive({
@@ -135,6 +140,8 @@ async function fetchData() {
     total.value = res.total
   } finally {
     loading.value = false
+    await nextTick()
+    tableScroll.updateTableScrollY()
   }
 }
 

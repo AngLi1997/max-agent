@@ -75,9 +75,11 @@ function handleContextAction(action: string) {
 
 <style scoped>
 .tab-bar {
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
-  padding: 4px 8px 0;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(180deg, #f8fbff 0%, #fdfefe 100%);
+  border: 1px solid #e7edf6;
+  border-bottom: none;
+  padding: 10px 14px 0;
 }
 .tab-bar-scroll {
   display: flex;
@@ -97,15 +99,15 @@ function handleContextAction(action: string) {
   white-space: nowrap;
   font-size: 13px;
   color: #666;
-  background: #fafafa;
+  background: #edf3ff;
   transition: all 0.2s;
 }
-.tab-item:hover { color: #1890ff; background: #e6f7ff; }
+.tab-item:hover { color: #1677ff; background: #f3f7ff; }
 .tab-item.active {
-  color: #1890ff;
+  color: #1677ff;
   background: #fff;
-  border-color: #d9d9d9;
-  border-bottom-color: #fff;
+  border-color: #dbe7ff;
+  box-shadow: 0 -1px 0 #dbe7ff, 0 10px 24px rgba(22, 119, 255, 0.08);
 }
 .tab-close {
   font-size: 14px;
@@ -118,7 +120,7 @@ function handleContextAction(action: string) {
   align-items: center;
   justify-content: center;
 }
-.tab-close:hover { background: #ddd; color: #333; }
+.tab-close:hover { background: #dbe7ff; color: #344054; }
 .tab-context-menu {
   position: fixed;
   background: #fff;

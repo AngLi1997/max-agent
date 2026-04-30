@@ -59,7 +59,7 @@ async def list_roles(
             description=r.description,
             status=r.status,
             isBuiltin=r.is_builtin,
-            createdAt=r.created_at.isoformat(sep=" ", timespec="seconds"),
+            createdAt=r.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         )
         for r in rows
     ]
@@ -105,7 +105,7 @@ async def create_role(
         description=role.description,
         status=role.status,
         isBuiltin=role.is_builtin,
-        createdAt=role.created_at.isoformat(sep=" ", timespec="seconds"),
+        createdAt=role.created_at.strftime("%Y-%m-%d %H:%M:%S"),
     )
 
 
@@ -149,7 +149,7 @@ async def update_role(
         description=role.description,
         status=role.status,
         isBuiltin=role.is_builtin,
-        createdAt=role.created_at.isoformat(sep=" ", timespec="seconds"),
+        createdAt=role.created_at.strftime("%Y-%m-%d %H:%M:%S"),
     )
 
 

@@ -1,38 +1,41 @@
 <template>
-  <div>
-    <a-card style="margin-bottom: 16px">
-      <a-form layout="inline" :model="searchForm">
-        <a-form-item label="用户名">
-          <a-input v-model:value="searchForm.username" placeholder="请输入用户名" allow-clear style="width: 180px" />
-        </a-form-item>
-        <a-form-item label="登录结果">
-          <a-select v-model:value="searchForm.result" placeholder="请选择结果" allow-clear style="width: 160px">
-            <a-select-option value="成功">成功</a-select-option>
-            <a-select-option value="失败">失败</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="时间范围">
-          <a-range-picker v-model:value="searchForm.timeRange" show-time />
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="fetchData">查询</a-button>
-          <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
+  <div class="page-container">
+    <div class="page-section">
+      <div class="page-toolbar">
+        <a-form layout="inline" :model="searchForm">
+          <a-form-item label="用户名">
+            <a-input v-model:value="searchForm.username" placeholder="请输入用户名" allow-clear style="width: 180px" />
+          </a-form-item>
+          <a-form-item label="登录结果">
+            <a-select v-model:value="searchForm.result" placeholder="请选择结果" allow-clear style="width: 160px">
+              <a-select-option value="成功">成功</a-select-option>
+              <a-select-option value="失败">失败</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="时间范围">
+            <a-range-picker v-model:value="searchForm.timeRange" show-time />
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="fetchData">查询</a-button>
+            <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
+          </a-form-item>
+        </a-form>
+      </div>
+    </div>
 
-    <a-card title="登录日志列表">
+    <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
       <a-table
-        size="small"
+        size="middle"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
         :pagination="{ total, pageSize: 10, showTotal: (t: number) => `共 ${t} 条` }"
         row-key="id"
+        :scroll="{ y: tableScroll.tableScrollY }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'result'">
-            <a-tag :color="record.result === '成功' ? 'green' : 'red'">{{ record.result }}</a-tag>
+            <a-tag class="page-status-tag">{{ record.result }}</a-tag>
           </template>
           <template v-if="column.key === 'action'">
             <a-dropdown>
@@ -48,7 +51,7 @@
           </template>
         </template>
       </a-table>
-    </a-card>
+    </div>
 
     <a-drawer
       v-model:open="detailVisible"
@@ -70,19 +73,20 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingLoginLog' })
 
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { EyeOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useTableScrollY } from '@/composables/useTableScrollY'
 import { useUserStore } from '@/stores/user'
 import { getLoginLogApi, type LoginLogItem } from '../../../api/log'
 
 const columns = [
-  { title: '用户名', dataIndex: 'username', key: 'username' },
-  { title: '登录IP', dataIndex: 'ip', key: 'ip' },
-  { title: '登录地点', dataIndex: 'location', key: 'location' },
-  { title: '设备/浏览器', dataIndex: 'device', key: 'device' },
-  { title: '登录结果', dataIndex: 'result', key: 'result' },
-  { title: '登录时间', dataIndex: 'time', key: 'time' },
+  { title: '用户名', dataIndex: 'username', key: 'username', width: 120, ellipsis: { showTitle: true } },
+  { title: '登录IP', dataIndex: 'ip', key: 'ip', width: 140, ellipsis: { showTitle: true } },
+  { title: '登录地点', dataIndex: 'location', key: 'location', width: 150, ellipsis: { showTitle: true } },
+  { title: '设备/浏览器', dataIndex: 'device', key: 'device', width: 200, ellipsis: { showTitle: true } },
+  { title: '登录结果', dataIndex: 'result', key: 'result', width: 100 },
+  { title: '登录时间', dataIndex: 'time', key: 'time', width: 180, ellipsis: { showTitle: true } },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
@@ -92,6 +96,7 @@ const total = ref(0)
 const detailVisible = ref(false)
 const currentDetail = ref<LoginLogItem | null>(null)
 const { drawerWidth } = useDrawerWidth()
+const tableScroll = useTableScrollY()
 const userStore = useUserStore()
 const canRead = computed(() => userStore.hasPermission('login-log:read'))
 
@@ -115,6 +120,8 @@ async function fetchData() {
     total.value = res.total
   } finally {
     loading.value = false
+    await nextTick()
+    tableScroll.updateTableScrollY()
   }
 }
 

@@ -1,38 +1,41 @@
 <template>
-  <div>
-    <a-card style="margin-bottom: 16px">
-      <a-form layout="inline" :model="searchForm">
-        <a-form-item label="模型名称">
-          <a-input v-model:value="searchForm.name" placeholder="请输入模型名称" allow-clear style="width: 200px" />
-        </a-form-item>
-        <a-form-item label="提供商">
-          <a-select v-model:value="searchForm.provider" placeholder="请选择提供商" allow-clear style="width: 160px">
-            <a-select-option value="OpenAI">OpenAI</a-select-option>
-            <a-select-option value="Anthropic">Anthropic</a-select-option>
-            <a-select-option value="Google">Google</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="fetchData">查询</a-button>
-          <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
+  <div class="page-container">
+    <div class="page-section">
+      <div class="page-toolbar">
+        <a-form layout="inline" :model="searchForm">
+          <a-form-item label="模型名称">
+            <a-input v-model:value="searchForm.name" placeholder="请输入模型名称" allow-clear style="width: 200px" />
+          </a-form-item>
+          <a-form-item label="提供商">
+            <a-select v-model:value="searchForm.provider" placeholder="请选择提供商" allow-clear style="width: 160px">
+              <a-select-option value="OpenAI">OpenAI</a-select-option>
+              <a-select-option value="Anthropic">Anthropic</a-select-option>
+              <a-select-option value="Google">Google</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="fetchData">查询</a-button>
+            <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
+          </a-form-item>
+        </a-form>
+        <div class="page-toolbar-actions">
+          <a-button type="primary" @click="handleAdd">
+            <template #icon><PlusOutlined /></template>
+            新增模型
+          </a-button>
+        </div>
+      </div>
+    </div>
 
-    <a-card title="模型列表">
-      <template #extra>
-        <a-button type="primary" @click="handleAdd">
-          <template #icon><PlusOutlined /></template>
-          新增模型
-        </a-button>
-      </template>
+    <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
       <a-table
-        size="small"
+        size="middle"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
         :pagination="{ total, pageSize: 10, showTotal: (t: number) => `共 ${t} 条` }"
         row-key="id"
+        :scroll="{ y: tableScroll.tableScrollY }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'status'">
@@ -58,7 +61,7 @@
           </template>
         </template>
       </a-table>
-    </a-card>
+    </div>
 
     <a-drawer
       :title="drawerTitle"
@@ -91,10 +94,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'Model' })
 
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useTableScrollY } from '@/composables/useTableScrollY'
 import {
   getModelListApi,
   createModelApi,
@@ -104,12 +108,13 @@ import {
 } from '../../api/model'
 
 const { drawerWidth } = useDrawerWidth()
+const tableScroll = useTableScrollY()
 
 const columns = [
-  { title: '模型名称', dataIndex: 'name', key: 'name' },
-  { title: '提供商', dataIndex: 'provider', key: 'provider' },
+  { title: '模型名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: { showTitle: true } },
+  { title: '提供商', dataIndex: 'provider', key: 'provider', width: 120, ellipsis: { showTitle: true } },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
-  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt' },
+  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180, ellipsis: { showTitle: true } },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
@@ -132,6 +137,8 @@ async function fetchData() {
     total.value = res.total
   } finally {
     loading.value = false
+    await nextTick()
+    tableScroll.updateTableScrollY()
   }
 }
 

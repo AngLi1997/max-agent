@@ -38,7 +38,7 @@ def _build_user_item(user: User) -> UserListItem:
         roles=role_items,
         roleIds=[r.id for r in user.roles],
         status=user.status,
-        createdAt=user.created_at.isoformat(sep=" ", timespec="seconds"),
+        createdAt=user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         isBuiltin=user.is_builtin,
     )
 

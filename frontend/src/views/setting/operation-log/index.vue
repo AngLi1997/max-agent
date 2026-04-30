@@ -1,44 +1,47 @@
 <template>
-  <div>
-    <a-card style="margin-bottom: 16px">
-      <a-form layout="inline" :model="searchForm">
-        <a-form-item label="操作人">
-          <a-input v-model:value="searchForm.operator" placeholder="请输入操作人" allow-clear style="width: 180px" />
-        </a-form-item>
-        <a-form-item label="模块">
-          <a-select v-model:value="searchForm.module" placeholder="请选择模块" allow-clear style="width: 180px">
-            <a-select-option value="用户管理">用户管理</a-select-option>
-            <a-select-option value="角色管理">角色管理</a-select-option>
-            <a-select-option value="权限管理">权限管理</a-select-option>
-            <a-select-option value="菜单管理">菜单管理</a-select-option>
-            <a-select-option value="系统配置">系统配置</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="时间范围">
-          <a-range-picker v-model:value="searchForm.timeRange" show-time />
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="fetchData">查询</a-button>
-          <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
+  <div class="page-container">
+    <div class="page-section">
+      <div class="page-toolbar">
+        <a-form layout="inline" :model="searchForm">
+          <a-form-item label="操作人">
+            <a-input v-model:value="searchForm.operator" placeholder="请输入操作人" allow-clear style="width: 180px" />
+          </a-form-item>
+          <a-form-item label="模块">
+            <a-select v-model:value="searchForm.module" placeholder="请选择模块" allow-clear style="width: 180px">
+              <a-select-option value="用户管理">用户管理</a-select-option>
+              <a-select-option value="角色管理">角色管理</a-select-option>
+              <a-select-option value="权限管理">权限管理</a-select-option>
+              <a-select-option value="菜单管理">菜单管理</a-select-option>
+              <a-select-option value="系统配置">系统配置</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="时间范围">
+            <a-range-picker v-model:value="searchForm.timeRange" show-time />
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="fetchData">查询</a-button>
+            <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
+          </a-form-item>
+        </a-form>
+      </div>
+    </div>
 
-    <a-card title="操作日志列表">
+    <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
       <a-table
-        size="small"
+        size="middle"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
         :pagination="{ total, pageSize: 10, showTotal: (t: number) => `共 ${t} 条` }"
         row-key="id"
+        :scroll="{ y: tableScroll.tableScrollY }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'method'">
-            <a-tag :color="methodColorMap[record.method]">{{ record.method }}</a-tag>
+            <a-tag :class="methodClassMap[record.method] || 'page-method-tag'">{{ record.method }}</a-tag>
           </template>
           <template v-if="column.key === 'result'">
-            <a-tag :color="record.result === '成功' ? 'green' : 'red'">{{ record.result }}</a-tag>
+            <a-tag class="page-status-tag">{{ record.result }}</a-tag>
           </template>
           <template v-if="column.key === 'action'">
             <a-dropdown>
@@ -54,7 +57,7 @@
           </template>
         </template>
       </a-table>
-    </a-card>
+    </div>
 
     <a-drawer
       v-model:open="detailVisible"
@@ -77,28 +80,29 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingOperationLog' })
 
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { EyeOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useTableScrollY } from '@/composables/useTableScrollY'
 import { useUserStore } from '@/stores/user'
 import { getOperationLogApi, type OperationLogItem } from '../../../api/log'
 
 const columns = [
-  { title: '操作人', dataIndex: 'operator', key: 'operator' },
-  { title: '模块', dataIndex: 'module', key: 'module' },
-  { title: '操作类型', dataIndex: 'action', key: 'actionType' },
-  { title: '请求方法', dataIndex: 'method', key: 'method' },
-  { title: '结果', dataIndex: 'result', key: 'result' },
-  { title: '时间', dataIndex: 'time', key: 'time' },
+  { title: '操作人', dataIndex: 'operator', key: 'operator', width: 100, ellipsis: { showTitle: true } },
+  { title: '模块', dataIndex: 'module', key: 'module', width: 100, ellipsis: { showTitle: true } },
+  { title: '操作类型', dataIndex: 'action', key: 'actionType', width: 100, ellipsis: { showTitle: true } },
+  { title: '请求方法', dataIndex: 'method', key: 'method', width: 100 },
+  { title: '结果', dataIndex: 'result', key: 'result', width: 80 },
+  { title: '时间', dataIndex: 'time', key: 'time', width: 180, ellipsis: { showTitle: true } },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
-const methodColorMap: Record<string, string> = {
-  GET: 'blue',
-  POST: 'green',
-  PUT: 'orange',
-  PATCH: 'purple',
-  DELETE: 'red',
+const methodClassMap: Record<string, string> = {
+  GET: 'page-method-tag',
+  POST: 'page-method-tag',
+  PUT: 'page-method-tag page-method-tag--soft',
+  PATCH: 'page-method-tag page-method-tag--soft',
+  DELETE: 'page-method-tag page-method-tag--soft',
 }
 
 const loading = ref(false)
@@ -107,6 +111,7 @@ const total = ref(0)
 const detailVisible = ref(false)
 const currentDetail = ref<OperationLogItem | null>(null)
 const { drawerWidth } = useDrawerWidth()
+const tableScroll = useTableScrollY()
 const userStore = useUserStore()
 const canRead = computed(() => userStore.hasPermission('operation-log:read'))
 
@@ -130,6 +135,8 @@ async function fetchData() {
     total.value = res.total
   } finally {
     loading.value = false
+    await nextTick()
+    tableScroll.updateTableScrollY()
   }
 }
 

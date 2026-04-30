@@ -22,6 +22,10 @@ ROLES = [
 ]
 
 PERMISSIONS = [
+    {"name": "仪表盘查看", "identifier": "dashboard:view", "type": "菜单", "status": "active"},
+    {"name": "模型管理查看", "identifier": "model:view", "type": "菜单", "status": "active"},
+    {"name": "技能管理查看", "identifier": "skill:view", "type": "菜单", "status": "active"},
+    {"name": "工具管理查看", "identifier": "tool:view", "type": "菜单", "status": "active"},
     {"name": "系统设置查看", "identifier": "setting:view", "type": "菜单", "status": "active"},
     {"name": "用户管理", "identifier": "setting:user", "type": "菜单", "status": "active"},
     {"name": "角色管理", "identifier": "setting:role", "type": "菜单", "status": "active"},

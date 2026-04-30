@@ -1,37 +1,40 @@
 <template>
-  <div>
-    <a-card style="margin-bottom: 16px">
-      <a-form layout="inline" :model="searchForm">
-        <a-form-item label="角色名称">
-          <a-input v-model:value="searchForm.name" placeholder="请输入角色名称" allow-clear style="width: 200px" />
-        </a-form-item>
-        <a-form-item label="状态">
-          <a-select v-model:value="searchForm.status" placeholder="请选择状态" allow-clear style="width: 160px">
-            <a-select-option value="active">启用</a-select-option>
-            <a-select-option value="inactive">禁用</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="fetchData">查询</a-button>
-          <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
+  <div class="page-container">
+    <div class="page-section">
+      <div class="page-toolbar">
+        <a-form layout="inline" :model="searchForm">
+          <a-form-item label="角色名称">
+            <a-input v-model:value="searchForm.name" placeholder="请输入角色名称" allow-clear style="width: 200px" />
+          </a-form-item>
+          <a-form-item label="状态">
+            <a-select v-model:value="searchForm.status" placeholder="请选择状态" allow-clear style="width: 160px">
+              <a-select-option value="active">启用</a-select-option>
+              <a-select-option value="inactive">禁用</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="fetchData">查询</a-button>
+            <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
+          </a-form-item>
+        </a-form>
+        <div v-if="canCreate" class="page-toolbar-actions">
+          <a-button type="primary" @click="handleAdd">
+            <template #icon><PlusOutlined /></template>
+            新增角色
+          </a-button>
+        </div>
+      </div>
+    </div>
 
-    <a-card title="角色列表">
-      <template #extra>
-        <a-button v-if="canCreate" type="primary" @click="handleAdd">
-          <template #icon><PlusOutlined /></template>
-          新增角色
-        </a-button>
-      </template>
+    <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
       <a-table
-        size="small"
+        size="middle"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
         :pagination="{ total, pageSize: 10, showTotal: (t: number) => `共 ${t} 条` }"
         row-key="id"
+        :scroll="{ y: tableScroll.tableScrollY }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.dataIndex === 'status'">
@@ -59,7 +62,7 @@
           </template>
         </template>
       </a-table>
-    </a-card>
+    </div>
 
     <a-drawer
       :title="drawerTitle"
@@ -111,10 +114,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingRole' })
 
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useTableScrollY } from '@/composables/useTableScrollY'
 import { useUserStore } from '@/stores/user'
 import {
   getRoleListApi,
@@ -135,9 +139,9 @@ interface PermissionTreeNode {
 }
 
 const columns = [
-  { title: '角色名称', dataIndex: 'name', key: 'name' },
-  { title: '角色编码', dataIndex: 'code', key: 'code' },
-  { title: '描述', dataIndex: 'description', key: 'description' },
+  { title: '角色名称', dataIndex: 'name', key: 'name', width: 120, ellipsis: { showTitle: true } },
+  { title: '角色编码', dataIndex: 'code', key: 'code', width: 120, ellipsis: { showTitle: true } },
+  { title: '描述', dataIndex: 'description', key: 'description', width: 200, ellipsis: { showTitle: true } },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
   { title: '内置角色', dataIndex: 'isBuiltin', key: 'isBuiltin', width: 100, align: 'center' as const },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
@@ -157,6 +161,7 @@ const checkedPermissions = ref<number[]>([])
 const permissionTree = ref<PermissionTreeNode[]>([])
 const permissionSubmitLoading = ref(false)
 const { drawerWidth } = useDrawerWidth()
+const tableScroll = useTableScrollY()
 const userStore = useUserStore()
 
 const canCreate = computed(() => userStore.hasPermission('role:create'))
@@ -199,6 +204,8 @@ async function fetchData() {
     total.value = res.total
   } finally {
     loading.value = false
+    await nextTick()
+    tableScroll.updateTableScrollY()
   }
 }
 

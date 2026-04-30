@@ -1,8 +1,112 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #f5f7fa;
 }
 
 #app {
   height: 100vh;
+}
+
+.page-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.page-section {
+  padding: 20px;
+}
+
+.page-section + .page-section {
+  border-top: 1px solid #f2f4f7;
+}
+
+.page-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.page-toolbar .ant-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 0;
+  flex: 1;
+}
+
+.page-toolbar .ant-form-item {
+  margin-bottom: 0;
+}
+
+.page-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.page-table-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.page-table-section > .ant-table-wrapper,
+.page-table-section > .ant-spin-nested-loading,
+.page-table-section > .ant-spin-nested-loading > .ant-spin-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-table-section .ant-table-wrapper,
+.page-table-section .ant-spin-nested-loading,
+.page-table-section .ant-spin-nested-loading > .ant-spin-container,
+.page-table-section .ant-table,
+.page-table-section .ant-table-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-table-section .ant-pagination {
+  flex-shrink: 0;
+  margin: 16px 0 0;
+}
+
+.page-table-section .ant-table-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto !important;
+}
+
+.page-status-tag.ant-tag {
+  color: #1d4ed8;
+  background: #eef4ff;
+  border-color: #c7d7fe;
+}
+
+.page-status-tag--muted.ant-tag {
+  color: #3558b7;
+  background: #f5f8ff;
+  border-color: #d9e3ff;
+}
+
+.page-method-tag.ant-tag {
+  color: #2146a6;
+  background: #edf3ff;
+  border-color: #cbd8ff;
+}
+
+.page-method-tag--soft.ant-tag {
+  color: #4964c8;
+  background: #f5f8ff;
+  border-color: #dce5ff;
 }

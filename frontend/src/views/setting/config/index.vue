@@ -1,31 +1,34 @@
 <template>
-  <div>
-    <a-card style="margin-bottom: 16px">
-      <a-form layout="inline" :model="searchForm">
-        <a-form-item label="配置key">
-          <a-input v-model:value="searchForm.key" placeholder="请输入配置key" allow-clear style="width: 220px" />
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="fetchData">查询</a-button>
-          <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
+  <div class="page-container">
+    <div class="page-section">
+      <div class="page-toolbar">
+        <a-form layout="inline" :model="searchForm">
+          <a-form-item label="配置key">
+            <a-input v-model:value="searchForm.key" placeholder="请输入配置key" allow-clear style="width: 220px" />
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="fetchData">查询</a-button>
+            <a-button style="margin-left: 8px" @click="handleReset">重置</a-button>
+          </a-form-item>
+        </a-form>
+        <div v-if="canCreate" class="page-toolbar-actions">
+          <a-button type="primary" @click="handleAdd">
+            <template #icon><PlusOutlined /></template>
+            新增配置
+          </a-button>
+        </div>
+      </div>
+    </div>
 
-    <a-card title="配置列表">
-      <template #extra>
-        <a-button v-if="canCreate" type="primary" @click="handleAdd">
-          <template #icon><PlusOutlined /></template>
-          新增配置
-        </a-button>
-      </template>
+    <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
       <a-table
-        size="small"
+        size="middle"
         :columns="columns"
         :data-source="dataSource"
         :loading="loading"
         :pagination="{ total, pageSize: 10, showTotal: (t: number) => `共 ${t} 条` }"
         row-key="id"
+        :scroll="{ y: tableScroll.tableScrollY }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'action'">
@@ -43,7 +46,7 @@
           </template>
         </template>
       </a-table>
-    </a-card>
+    </div>
 
     <a-drawer
       :title="drawerTitle"
@@ -78,10 +81,11 @@
 <script setup lang="ts">
 defineOptions({ name: 'SettingConfig' })
 
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vue'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
+import { useTableScrollY } from '@/composables/useTableScrollY'
 import { useUserStore } from '@/stores/user'
 import {
   getConfigListApi,
@@ -92,10 +96,10 @@ import {
 } from '../../../api/config'
 
 const columns = [
-  { title: '配置项名称', dataIndex: 'name', key: 'name' },
-  { title: 'key', dataIndex: 'key', key: 'key' },
-  { title: 'value', dataIndex: 'value', key: 'value' },
-  { title: '描述', dataIndex: 'description', key: 'description' },
+  { title: '配置项名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: { showTitle: true } },
+  { title: 'key', dataIndex: 'key', key: 'key', width: 180, ellipsis: { showTitle: true } },
+  { title: 'value', dataIndex: 'value', key: 'value', width: 200, ellipsis: { showTitle: true } },
+  { title: '描述', dataIndex: 'description', key: 'description', width: 200, ellipsis: { showTitle: true } },
   { title: '操作', key: 'action', width: 90, align: 'center' as const },
 ]
 
@@ -107,6 +111,7 @@ const drawerTitle = ref('新增配置')
 const editingId = ref<number | null>(null)
 const submitLoading = ref(false)
 const { drawerWidth } = useDrawerWidth()
+const tableScroll = useTableScrollY()
 const userStore = useUserStore()
 
 const canCreate = computed(() => userStore.hasPermission('config:create'))
@@ -124,6 +129,8 @@ async function fetchData() {
     total.value = res.total
   } finally {
     loading.value = false
+    await nextTick()
+    tableScroll.updateTableScrollY()
   }
 }
 
