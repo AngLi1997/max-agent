@@ -88,6 +88,56 @@ pnpm preview
   - `frontend/tsconfig.app.json` 用于浏览器端源码与 `.vue` 文件。
   - `frontend/tsconfig.node.json` 用于 `vite.config.ts` 这类 Node 侧配置文件。
 
+## 前端编码规范
+
+### 表格页面布局规范
+
+所有包含 Ant Design Table 的页面必须遵循以下统一布局模式：
+
+**HTML 结构：**
+
+```html
+<div class="page-container">
+  <!-- 搜索栏区域 -->
+  <div class="page-section">
+    <div class="page-toolbar">...</div>
+  </div>
+  <!-- 表格区域 -->
+  <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
+    <a-table :scroll="{ y: tableScroll.tableScrollY }" .../>
+  </div>
+</div>
+```
+
+**必须使用 `useTableScrollY` 组合式函数：**
+
+```ts
+import { useTableScrollY } from '@/composables/useTableScrollY'
+const tableScroll = useTableScrollY()
+```
+
+- `:ref="tableScroll.tableSectionRef"` 绑定到 `.page-table-section` 容器
+- `:scroll="{ y: tableScroll.tableScrollY }"` 传给 `<a-table>`
+- 数据加载完成后调用 `tableScroll.updateTableScrollY()`
+
+**CSS flex 链路（`style.css` 已全局定义，不要在页面中重复声明）：**
+
+从 `.page-table-section` 到 `.ant-table-body` 的完整 flex 链必须保持连续：
+
+```
+.page-table-section        → flex: 1; min-height: 0; overflow: hidden
+  .ant-table-wrapper        → flex: 1; min-height: 0; display: flex; flex-direction: column
+    .ant-spin-nested-loading → (同上)
+      .ant-spin-container    → (同上)
+        .ant-table           → (同上)
+          .ant-table-container → (同上)  ← 不可遗漏
+            .ant-table-header  → 自然高度
+            .ant-table-body    → flex: 1; min-height: 0; overflow-y: auto
+        .ant-pagination      → flex-shrink: 0
+```
+
+关键点：Ant Design Vue 4.x 在 `.ant-table` 和 header/body 之间有 `.ant-table-container` 层，flex 链路中不可遗漏此层，否则表格内容会溢出屏幕。
+
 ## 当前代码状态的实际含义
 
 这是一个刚初始化的仓库：

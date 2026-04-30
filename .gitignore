@@ -43,8 +43,10 @@ pnpm-debug.log*
 .idea/
 .vscode/
 
-# Docker data
-docker-data/
+# Docker data (keep config tracked)
+docker-data/postgres/
+docker-data/redis/
+docker-data/minio/
 
 # Superpowers
 .superpowers/

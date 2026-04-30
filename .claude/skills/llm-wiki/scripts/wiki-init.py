@@ -340,9 +340,9 @@ Examples:
 ---
 *Configuration version: 1.0*
 """
-    wiki_path = base / "WIKI.md"
+    wiki_path = base / "wiki" / "WIKI.md"
     wiki_path.write_text(content, encoding='utf-8')
-    print(f"  Created: WIKI.md")
+    print(f"  Created: wiki/WIKI.md")
 
 
 def create_gitignore(base: Path) -> None:

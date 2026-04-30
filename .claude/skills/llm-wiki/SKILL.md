@@ -51,7 +51,8 @@ wiki-project/
 │   ├── sources/                # Source summaries
 │   └── comparisons/            # Comparison analyses
 ├── log.md                      # Chronological activity log
-└── WIKI.md                     # Layer 3: Schema configuration
+└── wiki/
+    ├── WIKI.md                 # Layer 3: Schema configuration
 ```
 
 ## Core Operations
