@@ -35,3 +35,10 @@ def create_temporary_password(length: int = 12) -> str:
 def delete_user_or_raise(user) -> None:
     if user.is_builtin:
         raise ValueError("内置用户不允许删除")
+
+
+def reset_password_for_user(user) -> str:
+    temp_password = create_temporary_password()
+    user.hashed_password = password_hash.hash(temp_password)
+    user.must_change_password = True
+    return temp_password

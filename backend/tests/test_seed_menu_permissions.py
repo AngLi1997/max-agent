@@ -11,3 +11,8 @@ def test_seeded_menu_permissions_have_definitions() -> None:
     ]
 
     assert not missing_permissions, f"Missing permission definitions: {missing_permissions}"
+
+
+def test_reset_password_permission_is_seeded() -> None:
+    permission_identifiers = {p["identifier"] for p in PERMISSIONS}
+    assert "user:reset-password" in permission_identifiers

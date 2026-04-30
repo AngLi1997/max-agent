@@ -61,3 +61,8 @@ class UserListItem(BaseModel):
 class CreateUserResponse(BaseModel):
     user: UserListItem
     temporaryPassword: str
+
+
+class ResetPasswordResponse(BaseModel):
+    message: str
+    temporaryPassword: str

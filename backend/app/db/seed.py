@@ -56,6 +56,7 @@ PERMISSIONS = [
     {"name": "配置删除", "identifier": "config:delete", "type": "按钮", "status": "active"},
     {"name": "操作日志查看", "identifier": "operation-log:read", "type": "API", "status": "active"},
     {"name": "登录日志查看", "identifier": "login-log:read", "type": "API", "status": "active"},
+    {"name": "用户重置密码", "identifier": "user:reset-password", "type": "按钮", "status": "active"},
 ]
 
 USERS = [

@@ -60,3 +60,25 @@ def test_delete_user_blocks_builtin_user() -> None:
     )
     with pytest.raises(ValueError, match="内置用户不允许删除"):
         delete_user_or_raise(user)
+
+
+def test_reset_password_for_user_sets_new_hash_and_force_change() -> None:
+    from app.services.system_users import reset_password_for_user
+
+    user = User(
+        username="editor",
+        email="editor@example.com",
+        hashed_password=password_hash.hash("old-pass"),
+        is_active=True,
+        is_superuser=False,
+        is_verified=True,
+        avatar="",
+        must_change_password=False,
+    )
+    old_hash = user.hashed_password
+    temp_password = reset_password_for_user(user)
+
+    assert len(temp_password) >= 12
+    assert user.hashed_password != old_hash
+    assert user.must_change_password is True
+    assert password_hash.verify(temp_password, user.hashed_password)
