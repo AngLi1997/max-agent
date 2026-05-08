@@ -10,6 +10,21 @@ class LlmModelItem(BaseModel):
     created_at: datetime
 
 
+class ModelListItem(BaseModel):
+    id: int
+    provider_id: int
+    model_name: str
+    provider_name: str
+    provider_type: str
+    provider_api_url: str
+    status: str
+    created_at: datetime
+
+
+class ModelUpdateRequest(BaseModel):
+    status: str | None = None
+
+
 class ProviderCreateRequest(BaseModel):
     name: str
     type: str  # "openai" | "ollama"
@@ -47,8 +62,13 @@ class FetchModelsResponse(BaseModel):
     models: list[str]
 
 
+class ChatMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
 class ChatRequest(BaseModel):
-    message: str
+    messages: list[ChatMessage]
 
 
 class ChatStreamChunk(BaseModel):

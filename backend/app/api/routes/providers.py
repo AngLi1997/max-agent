@@ -15,6 +15,8 @@ from app.schemas.llm_provider import (
     FetchModelsRequest,
     FetchModelsResponse,
     LlmModelItem,
+    ModelListItem,
+    ModelUpdateRequest,
     ProviderCreateRequest,
     ProviderItem,
     ProviderUpdateRequest,
@@ -27,8 +29,10 @@ from app.services.llm_providers import (
     delete_model,
     delete_provider,
     fetch_remote_models,
+    get_models,
     get_provider_by_id,
     get_providers,
+    update_model,
     update_provider,
 )
 from app.utils.request import get_client_ip
@@ -75,6 +79,17 @@ async def list_providers(
 ) -> ListResponse[ProviderItem]:
     rows, total = await get_providers(session, name=name, type_=type)
     return ListResponse(list=[_provider_to_item(r) for r in rows], total=total)
+
+
+@router.get("/models", response_model=ListResponse[ModelListItem])
+async def list_models(
+    name: str | None = None,
+    type: str | None = None,
+    session: AsyncSession = Depends(get_db_session),
+    _user: User = Depends(require_permission("model:view")),
+) -> ListResponse[ModelListItem]:
+    rows, total = await get_models(session, name=name, type_=type)
+    return ListResponse(list=[ModelListItem(**r) for r in rows], total=total)
 
 
 @router.get("/{provider_id}", response_model=ProviderItem)
@@ -222,6 +237,21 @@ async def delete_model_endpoint(
     return {"message": "删除成功"}
 
 
+@router.put("/models/{model_id}")
+async def update_model_endpoint(
+    model_id: int,
+    payload: ModelUpdateRequest,
+    session: AsyncSession = Depends(get_db_session),
+    _user: User = Depends(require_permission("model:update")),
+) -> dict[str, str]:
+    model = await session.get(LlmModel, model_id)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="模型不存在")
+    await update_model(session, model, status=payload.status)
+    await session.commit()
+    return {"message": "更新成功"}
+
+
 @router.post("/models/{model_id}/chat")
 async def chat_with_model(
     model_id: int,
@@ -241,7 +271,7 @@ async def chat_with_model(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="关联接入点不存在")
 
     return StreamingResponse(
-        chat_with_model_stream(model.provider, model.model_name, payload.message),
+        chat_with_model_stream(model.provider, model.model_name, [m.model_dump() for m in payload.messages]),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

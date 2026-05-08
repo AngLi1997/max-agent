@@ -139,18 +139,54 @@ async def delete_model(session: AsyncSession, model_id: int) -> LlmModel | None:
     return model
 
 
-def _build_openai_messages(user_message: str) -> list[dict]:
-    return [{"role": "user", "content": user_message}]
+async def get_models(
+    session: AsyncSession,
+    name: str | None = None,
+    type_: str | None = None,
+) -> tuple[Sequence[dict], int]:
+    """Get flat model list with provider info joined."""
+    q = (
+        select(LlmModel, LlmProvider.name, LlmProvider.type, LlmProvider.api_url)
+        .join(LlmProvider, LlmModel.provider_id == LlmProvider.id)
+        .order_by(LlmModel.created_at.desc())
+    )
+    if name:
+        q = q.where(LlmModel.model_name.ilike(f"%{name}%"))
+    if type_:
+        q = q.where(LlmProvider.type == type_)
+
+    rows = (await session.execute(q)).all()
+    result = []
+    for model, p_name, p_type, p_url in rows:
+        result.append({
+            "id": model.id,
+            "provider_id": model.provider_id,
+            "model_name": model.model_name,
+            "provider_name": p_name,
+            "provider_type": p_type,
+            "provider_api_url": p_url,
+            "status": model.status,
+            "created_at": model.created_at,
+        })
+    return result, len(result)
 
 
-def _build_ollama_messages(user_message: str) -> list[dict]:
-    return [{"role": "user", "content": user_message}]
+async def update_model(
+    session: AsyncSession,
+    model: LlmModel,
+    status: str | None,
+) -> LlmModel:
+    if status is not None:
+        model.status = status
+    session.add(model)
+    await session.flush()
+    return model
 
 
 async def chat_with_model_stream(
     provider: LlmProvider,
     model_name: str,
-    user_message: str,
+    messages: list[dict],
 ):
     """Build and send a streaming chat request to the provider API.
 
@@ -166,7 +202,7 @@ async def chat_with_model_stream(
                 url = _build_llm_url(provider.api_url, "openai", "/chat/completions")
                 body = {
                     "model": model_name,
-                    "messages": _build_openai_messages(user_message),
+                    "messages": messages,
                     "stream": True,
                 }
                 async with client.stream("POST", url, json=body, headers=headers) as resp:
@@ -187,7 +223,7 @@ async def chat_with_model_stream(
                 url = provider.api_url.rstrip("/") + "/api/chat"
                 body = {
                     "model": model_name,
-                    "messages": _build_ollama_messages(user_message),
+                    "messages": messages,
                     "stream": True,
                 }
                 async with client.stream("POST", url, json=body, headers=headers) as resp:
