@@ -1,0 +1,202 @@
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.session import get_db_session
+from app.models.llm_provider import LlmProvider
+from app.models.user import User
+from app.schemas.common import ListResponse
+from app.schemas.llm_provider import (
+    ChatRequest,
+    FetchModelsRequest,
+    FetchModelsResponse,
+    LlmModelItem,
+    ProviderCreateRequest,
+    ProviderItem,
+    ProviderUpdateRequest,
+)
+from app.services.audit import write_operation_log
+from app.services.auth import current_active_user
+from app.services.authorization import require_permission
+from app.services.llm_providers import (
+    create_provider,
+    delete_model,
+    delete_provider,
+    fetch_remote_models,
+    get_provider_by_id,
+    get_providers,
+    update_provider,
+)
+from app.utils.request import get_client_ip
+
+router = APIRouter(prefix="/providers", tags=["providers"])
+
+
+def _provider_to_item(provider: LlmProvider) -> ProviderItem:
+    return ProviderItem(
+        id=provider.id,
+        name=provider.name,
+        type=provider.type,
+        api_url=provider.api_url,
+        api_key=provider.api_key,
+        status=provider.status,
+        models=[
+            LlmModelItem(
+                id=m.id,
+                model_name=m.model_name,
+                status=m.status,
+                created_at=m.created_at,
+            )
+            for m in (provider.models or [])
+        ],
+        created_at=provider.created_at,
+        updated_at=provider.updated_at,
+    )
+
+
+@router.get("/", response_model=ListResponse[ProviderItem])
+async def list_providers(
+    session: AsyncSession = Depends(get_db_session),
+    _user: User = Depends(require_permission("model:view")),
+) -> ListResponse[ProviderItem]:
+    rows, total = await get_providers(session)
+    return ListResponse(list=[_provider_to_item(r) for r in rows], total=total)
+
+
+@router.get("/{provider_id}", response_model=ProviderItem)
+async def get_provider(
+    provider_id: int,
+    session: AsyncSession = Depends(get_db_session),
+    _user: User = Depends(require_permission("model:view")),
+) -> ProviderItem:
+    provider = await get_provider_by_id(session, provider_id)
+    if not provider:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="接入点不存在")
+    return _provider_to_item(provider)
+
+
+@router.post("/", response_model=ProviderItem, status_code=status.HTTP_201_CREATED)
+async def create_provider_endpoint(
+    payload: ProviderCreateRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    user: User = Depends(require_permission("model:create")),
+) -> ProviderItem:
+    if not payload.models:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="请至少选择一个模型")
+    provider = await create_provider(
+        session,
+        name=payload.name,
+        type_=payload.type,
+        api_url=payload.api_url,
+        api_key=payload.api_key,
+        model_names=payload.models,
+    )
+    await write_operation_log(
+        session,
+        operator_id=user.id,
+        operator_name=user.username,
+        module="模型管理",
+        action="创建接入点",
+        method="POST",
+        result="成功",
+        detail=f"创建接入点 {provider.name}",
+        ip=get_client_ip(request),
+    )
+    await session.commit()
+    provider = await get_provider_by_id(session, provider.id)
+    return _provider_to_item(provider)
+
+
+@router.put("/{provider_id}", response_model=ProviderItem)
+async def update_provider_endpoint(
+    provider_id: int,
+    payload: ProviderUpdateRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    user: User = Depends(require_permission("model:update")),
+) -> ProviderItem:
+    provider = await get_provider_by_id(session, provider_id)
+    if not provider:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="接入点不存在")
+    provider = await update_provider(
+        session, provider,
+        name=payload.name,
+        api_url=payload.api_url,
+        api_key=payload.api_key,
+        status=payload.status,
+    )
+    await write_operation_log(
+        session,
+        operator_id=user.id,
+        operator_name=user.username,
+        module="模型管理",
+        action="更新接入点",
+        method="PUT",
+        result="成功",
+        detail=f"更新接入点 {provider.name}",
+        ip=get_client_ip(request),
+    )
+    await session.commit()
+    provider = await get_provider_by_id(session, provider.id)
+    return _provider_to_item(provider)
+
+
+@router.delete("/{provider_id}")
+async def delete_provider_endpoint(
+    provider_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+    user: User = Depends(require_permission("model:delete")),
+) -> dict[str, str]:
+    provider = await get_provider_by_id(session, provider_id)
+    if not provider:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="接入点不存在")
+    name = provider.name
+    await delete_provider(session, provider)
+    await write_operation_log(
+        session,
+        operator_id=user.id,
+        operator_name=user.username,
+        module="模型管理",
+        action="删除接入点",
+        method="DELETE",
+        result="成功",
+        detail=f"删除接入点 {name}",
+        ip=get_client_ip(request),
+    )
+    await session.commit()
+    return {"message": "删除成功"}
+
+
+@router.post("/fetch-models", response_model=FetchModelsResponse)
+async def fetch_models(
+    payload: FetchModelsRequest,
+    _user: User = Depends(require_permission("model:create")),
+) -> FetchModelsResponse:
+    try:
+        models = await fetch_remote_models(payload)
+        return FetchModelsResponse(models=models)
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"无法连接到 API 地址: {str(e)}",
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+
+@router.delete("/models/{model_id}")
+async def delete_model_endpoint(
+    model_id: int,
+    session: AsyncSession = Depends(get_db_session),
+    _user: User = Depends(require_permission("model:update")),
+) -> dict[str, str]:
+    model = await delete_model(session, model_id)
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="模型不存在")
+    await session.commit()
+    return {"message": "删除成功"}

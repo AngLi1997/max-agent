@@ -7,6 +7,7 @@ from app.api.routes import (
     logs_router,
     menus_router,
     permissions_router,
+    providers_router,
     roles_router,
     users_router,
 )
@@ -20,3 +21,4 @@ api_router.include_router(permissions_router)
 api_router.include_router(menus_router)
 api_router.include_router(configs_router)
 api_router.include_router(logs_router)
+api_router.include_router(providers_router)
