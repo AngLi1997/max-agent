@@ -120,23 +120,35 @@
           <a-input v-model:value="addForm.name" placeholder="请输入接入名称" />
         </a-form-item>
         <a-form-item label="API 地址" required>
-          <a-input v-model:value="addForm.api_url" placeholder="请输入 API 地址" />
+          <a-input
+            v-model:value="addForm.api_url"
+            placeholder="请输入 API 地址"
+            :addonAfter="addForm.type === 'openai' ? '/v1' : ''"
+          />
         </a-form-item>
         <a-form-item label="API Key">
           <a-input-password v-model:value="addForm.api_key" placeholder="请输入 API Key（可选）" />
         </a-form-item>
-        <a-form-item label=" ">
+        <a-form-item label=" " v-if="!fetchLoading && !availableModels.length">
           <a-button :loading="fetchLoading" @click="handleFetchModels">
             获取模型列表
           </a-button>
         </a-form-item>
-        <a-form-item label="选择模型" v-if="availableModels.length > 0">
-          <a-checkbox-group v-model:value="selectedModels">
-            <a-checkbox v-for="m in availableModels" :key="m" :value="m">
-              {{ m }}
-            </a-checkbox>
-          </a-checkbox-group>
-        </a-form-item>
+        <template v-if="availableModels.length > 0">
+          <a-form-item label="选择模型" required>
+            <a-select
+              v-model:value="selectedModels"
+              mode="multiple"
+              placeholder="请选择需要接入的模型"
+              style="width: 100%"
+            >
+              <a-select-option v-for="m in availableModels" :key="m" :value="m">{{ m }}</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label=" ">
+            <a-button :loading="fetchLoading" @click="handleFetchModels">重新获取</a-button>
+          </a-form-item>
+        </template>
       </a-form>
       <template #footer>
         <div style="text-align: right">
@@ -407,6 +419,8 @@ async function handleSubmitAdd() {
     message.success('创建成功')
     drawerVisible.value = false
     fetchData()
+  } catch (e: any) {
+    message.error(e?.response?.data?.detail || '创建失败')
   } finally {
     submitLoading.value = false
   }
@@ -428,6 +442,8 @@ async function handleSubmitEdit() {
     message.success('更新成功')
     editDrawerVisible.value = false
     fetchData()
+  } catch (e: any) {
+    message.error(e?.response?.data?.detail || '更新失败')
   } finally {
     submitLoading.value = false
   }

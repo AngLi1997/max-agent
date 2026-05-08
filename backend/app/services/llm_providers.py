@@ -11,6 +11,14 @@ from app.models.llm_provider import LlmProvider
 from app.schemas.llm_provider import FetchModelsRequest
 
 
+def _build_llm_url(base_url: str, provider_type: str, suffix: str) -> str:
+    """Build API URL: for OpenAI ensure /v1 prefix, for Ollama just append."""
+    url = base_url.rstrip("/")
+    if provider_type == "openai" and not url.endswith("/v1"):
+        url += "/v1"
+    return url + suffix
+
+
 async def fetch_remote_models(payload: FetchModelsRequest) -> list[str]:
     """Fetch available models from a provider API without persisting."""
     headers = {}
@@ -19,7 +27,7 @@ async def fetch_remote_models(payload: FetchModelsRequest) -> list[str]:
 
     async with httpx.AsyncClient(timeout=30) as client:
         if payload.type == "openai":
-            url = payload.api_url.rstrip("/") + "/v1/models"
+            url = _build_llm_url(payload.api_url, "openai", "/models")
             resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             data = resp.json()
@@ -155,7 +163,7 @@ async def chat_with_model_stream(
     try:
         async with httpx.AsyncClient(timeout=60) as client:
             if provider.type == "openai":
-                url = provider.api_url.rstrip("/") + "/v1/chat/completions"
+                url = _build_llm_url(provider.api_url, "openai", "/chat/completions")
                 body = {
                     "model": model_name,
                     "messages": _build_openai_messages(user_message),
