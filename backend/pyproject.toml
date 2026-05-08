@@ -11,6 +11,7 @@ dependencies = [
     "fastapi-users[sqlalchemy]>=14.0.1",
     "fastapi[standard]>=0.136.1",
     "greenlet>=3.2.4",
+    "httpx>=0.28.0",
     "minio>=7.2.18",
     "pydantic-settings>=2.10.1",
     "redis[hiredis]>=6.4.0",

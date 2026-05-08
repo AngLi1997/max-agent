@@ -1,4 +1,6 @@
 from app.db.base import Base
+from app.models.llm_model import LlmModel
+from app.models.llm_provider import LlmProvider
 from app.models.login_log import LoginLog
 from app.models.menu import Menu
 from app.models.operation_log import OperationLog
@@ -9,6 +11,8 @@ from app.models.user import User
 
 __all__ = [
     "Base",
+    "LlmModel",
+    "LlmProvider",
     "LoginLog",
     "Menu",
     "OperationLog",
