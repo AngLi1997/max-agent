@@ -43,14 +43,44 @@ export interface FetchModelsParams {
   api_key?: string
 }
 
-export interface ModelListResult {
+// Flat model list item (from GET /api/providers/models)
+export interface ModelListItem {
+  id: number
+  provider_id: number
+  model_name: string
+  provider_name: string
+  provider_type: string
+  provider_api_url: string
+  status: string
+  created_at: string
+}
+
+export interface ModelUpdateParams {
+  status?: string
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface ChatRequestParams {
+  messages: ChatMessage[]
+}
+
+export interface ProviderListResult {
   list: ProviderItem[]
+  total: number
+}
+
+export interface ModelListResult {
+  list: ModelListItem[]
   total: number
 }
 
 /* ---- Provider APIs ---- */
 
-export function getProviderListApi(params?: { name?: string; type?: string }): Promise<ModelListResult> {
+export function getProviderListApi(params?: { name?: string; type?: string }): Promise<ProviderListResult> {
   return request.get('/providers/', { params })
 }
 
@@ -78,6 +108,17 @@ export function deleteModelApi(modelId: number): Promise<void> {
   return request.delete(`/providers/models/${modelId}`)
 }
 
+/* ---- Flat Model APIs ---- */
+
+export function getModelListApi(params?: { name?: string; type?: string }): Promise<ModelListResult> {
+  return request.get('/providers/models', { params })
+}
+
+export function updateModelApi(id: number, data: ModelUpdateParams): Promise<void> {
+  return request.put(`/providers/models/${id}`, data)
+}
+
+/** Returns the SSE chat endpoint URL for direct fetch usage */
 export function getChatStreamUrl(modelId: number): string {
   return `/api/providers/models/${modelId}/chat`
 }
