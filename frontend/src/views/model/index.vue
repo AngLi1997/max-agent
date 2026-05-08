@@ -1,16 +1,16 @@
 <template>
   <div class="page-container">
+    <!-- Search toolbar -->
     <div class="page-section">
       <div class="page-toolbar">
         <a-form layout="inline" :model="searchForm">
-          <a-form-item label="模型名称">
-            <a-input v-model:value="searchForm.name" placeholder="请输入模型名称" allow-clear style="width: 200px" />
+          <a-form-item label="接入名称">
+            <a-input v-model:value="searchForm.name" placeholder="请输入接入名称" allow-clear style="width: 200px" />
           </a-form-item>
-          <a-form-item label="提供商">
-            <a-select v-model:value="searchForm.provider" placeholder="请选择提供商" allow-clear style="width: 160px">
-              <a-select-option value="OpenAI">OpenAI</a-select-option>
-              <a-select-option value="Anthropic">Anthropic</a-select-option>
-              <a-select-option value="Google">Google</a-select-option>
+          <a-form-item label="类型">
+            <a-select v-model:value="searchForm.type" placeholder="请选择类型" allow-clear style="width: 160px">
+              <a-select-option value="openai">OpenAI</a-select-option>
+              <a-select-option value="ollama">Ollama</a-select-option>
             </a-select>
           </a-form-item>
           <a-form-item>
@@ -21,12 +21,13 @@
         <div class="page-toolbar-actions">
           <a-button type="primary" @click="handleAdd">
             <template #icon><PlusOutlined /></template>
-            新增模型
+            新增接入
           </a-button>
         </div>
       </div>
     </div>
 
+    <!-- Provider table -->
     <div :ref="tableScroll.tableSectionRef" class="page-section page-table-section">
       <a-table
         size="middle"
@@ -36,14 +37,52 @@
         :pagination="{ total, pageSize: 10, showTotal: (t: number) => `共 ${t} 条` }"
         row-key="id"
         :scroll="{ y: tableScroll.tableScrollY }"
+        :expandable="{
+          expandedRowKeys,
+          onExpand: handleExpand,
+        }"
       >
+        <template #expandedRowRender="{ record }">
+          <div class="model-sub-table">
+            <a-table
+              :data-source="record.models"
+              :columns="modelColumns"
+              :pagination="false"
+              row-key="id"
+              size="small"
+            >
+              <template #bodyCell="{ column, record: modelRecord }">
+                <template v-if="column.dataIndex === 'status'">
+                  <a-switch
+                    :checked="modelRecord.status === 'active'"
+                    size="small"
+                    disabled
+                    checked-children="启用"
+                    un-checked-children="停用"
+                  />
+                </template>
+                <template v-if="column.key === 'action'">
+                  <a-space>
+                    <a-button type="link" size="small" @click="handleTest(modelRecord)">测试</a-button>
+                    <a-button type="link" danger size="small" @click="handleDeleteModel(modelRecord)">删除</a-button>
+                  </a-space>
+                </template>
+              </template>
+            </a-table>
+          </div>
+        </template>
         <template #bodyCell="{ column, record }">
+          <template v-if="column.dataIndex === 'type'">
+            <a-tag :color="record.type === 'openai' ? 'blue' : 'green'">
+              {{ record.type === 'openai' ? 'OpenAI' : 'Ollama' }}
+            </a-tag>
+          </template>
           <template v-if="column.dataIndex === 'status'">
             <a-switch
               :checked="record.status === 'active'"
+              disabled
               checked-children="启用"
               un-checked-children="停用"
-              @change="handleStatusChange(record)"
             />
           </template>
           <template v-if="column.key === 'action'">
@@ -63,28 +102,81 @@
       </a-table>
     </div>
 
+    <!-- Add provider drawer -->
     <a-drawer
       :title="drawerTitle"
       :open="drawerVisible"
       :width="drawerWidth"
       @close="drawerVisible = false"
     >
-      <a-form :model="formState" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
-        <a-form-item label="模型名称" required>
-          <a-input v-model:value="formState.name" placeholder="请输入模型名称" />
+      <a-form :model="addForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
+        <a-form-item label="类型" required>
+          <a-radio-group v-model:value="addForm.type">
+            <a-radio value="openai">OpenAI</a-radio>
+            <a-radio value="ollama">Ollama</a-radio>
+          </a-radio-group>
         </a-form-item>
-        <a-form-item label="提供商" required>
-          <a-select v-model:value="formState.provider" placeholder="请选择提供商">
-            <a-select-option value="OpenAI">OpenAI</a-select-option>
-            <a-select-option value="Anthropic">Anthropic</a-select-option>
-            <a-select-option value="Google">Google</a-select-option>
-          </a-select>
+        <a-form-item label="接入名称" required>
+          <a-input v-model:value="addForm.name" placeholder="请输入接入名称" />
+        </a-form-item>
+        <a-form-item label="API 地址" required>
+          <a-input v-model:value="addForm.api_url" placeholder="请输入 API 地址" />
+        </a-form-item>
+        <a-form-item label="API Key">
+          <a-input-password v-model:value="addForm.api_key" placeholder="请输入 API Key（可选）" />
+        </a-form-item>
+        <a-form-item label=" ">
+          <a-button :loading="fetchLoading" @click="handleFetchModels">
+            获取模型列表
+          </a-button>
+        </a-form-item>
+        <a-form-item label="选择模型" v-if="availableModels.length > 0">
+          <a-checkbox-group v-model:value="selectedModels">
+            <a-checkbox v-for="m in availableModels" :key="m.name" :value="m.name">
+              {{ m.name }}
+            </a-checkbox>
+          </a-checkbox-group>
         </a-form-item>
       </a-form>
       <template #footer>
         <div style="text-align: right">
           <a-button style="margin-right: 8px" @click="drawerVisible = false">取消</a-button>
-          <a-button type="primary" :loading="submitLoading" @click="handleSubmit">确定</a-button>
+          <a-button type="primary" :loading="submitLoading" @click="handleSubmitAdd">确定</a-button>
+        </div>
+      </template>
+    </a-drawer>
+
+    <!-- Edit provider drawer -->
+    <a-drawer
+      title="编辑接入"
+      :open="editDrawerVisible"
+      :width="drawerWidth"
+      @close="editDrawerVisible = false"
+    >
+      <a-form :model="editForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 16 }">
+        <a-form-item label="接入名称" required>
+          <a-input v-model:value="editForm.name" placeholder="请输入接入名称" />
+        </a-form-item>
+        <a-form-item label="API 地址" required>
+          <a-input v-model:value="editForm.api_url" placeholder="请输入 API 地址" />
+        </a-form-item>
+        <a-form-item label="API Key">
+          <a-input-password v-model:value="editForm.api_key" placeholder="请输入 API Key（可选）" />
+        </a-form-item>
+        <a-form-item label="状态">
+          <a-switch
+            v-model:checked="editForm.status"
+            checked-value="active"
+            un-checked-value="inactive"
+            checked-children="启用"
+            un-checked-children="停用"
+          />
+        </a-form-item>
+      </a-form>
+      <template #footer>
+        <div style="text-align: right">
+          <a-button style="margin-right: 8px" @click="editDrawerVisible = false">取消</a-button>
+          <a-button type="primary" :loading="submitLoading" @click="handleSubmitEdit">确定</a-button>
         </div>
       </template>
     </a-drawer>
@@ -100,39 +192,74 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons-vu
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
 import { useTableScrollY } from '@/composables/useTableScrollY'
 import {
-  getModelListApi,
-  createModelApi,
-  updateModelApi,
+  getProviderListApi,
+  createProviderApi,
+  updateProviderApi,
+  deleteProviderApi,
+  fetchRemoteModelsApi,
   deleteModelApi,
-  type ModelItem,
-} from '../../api/model'
+  type ProviderItem,
+  type LlmModelItem,
+} from '@/api/model'
 
 const { drawerWidth } = useDrawerWidth()
 const tableScroll = useTableScrollY()
 
 const columns = [
-  { title: '模型名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: { showTitle: true } },
-  { title: '提供商', dataIndex: 'provider', key: 'provider', width: 120, ellipsis: { showTitle: true } },
+  { title: '接入名称', dataIndex: 'name', key: 'name', width: 150, ellipsis: { showTitle: true } },
+  { title: '类型', dataIndex: 'type', key: 'type', width: 100 },
+  { title: 'API 地址', dataIndex: 'api_url', key: 'api_url', width: 250, ellipsis: { showTitle: true } },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
-  { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180, ellipsis: { showTitle: true } },
-  { title: '操作', key: 'action', width: 90, align: 'center' as const },
+  { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
+  { title: '操作', key: 'action', width: 100, align: 'center' as const },
+]
+
+const modelColumns = [
+  { title: '模型名称', dataIndex: 'model_name', key: 'model_name', width: 200 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
+  { title: '操作', key: 'action', width: 150, align: 'center' as const },
 ]
 
 const loading = ref(false)
-const dataSource = ref<ModelItem[]>([])
+const dataSource = ref<ProviderItem[]>([])
 const total = ref(0)
 const drawerVisible = ref(false)
-const drawerTitle = ref('新增模型')
+const editDrawerVisible = ref(false)
+const drawerTitle = ref('新增接入')
 const editingId = ref<number | null>(null)
 const submitLoading = ref(false)
+const expandedRowKeys = ref<number[]>([])
 
-const searchForm = reactive({ name: '', provider: undefined as string | undefined })
-const formState = reactive({ name: '', provider: undefined as string | undefined, status: undefined as 'active' | 'inactive' | undefined })
+// search form
+const searchForm = reactive({ name: '', type: undefined as string | undefined })
+
+// add provider form (in drawer)
+const addForm = reactive({
+  type: 'openai',
+  name: '',
+  api_url: '',
+  api_key: '',
+})
+const fetchLoading = ref(false)
+const availableModels = ref<{ name: string; checked: boolean }[]>([])
+const selectedModels = ref<string[]>([])
+
+// edit provider form
+const editForm = reactive({
+  name: '',
+  api_url: '',
+  api_key: '',
+  status: 'active',
+})
+
+// test model state (placeholder for chat modal in Task 8)
+const testModel = ref<{ id: number; model_name: string } | null>(null)
+const chatVisible = ref(false)
 
 async function fetchData() {
   loading.value = true
   try {
-    const res = await getModelListApi({ name: searchForm.name, provider: searchForm.provider })
+    const res = await getProviderListApi()
     dataSource.value = res.list
     total.value = res.total
   } finally {
@@ -144,83 +271,105 @@ async function fetchData() {
 
 function handleReset() {
   searchForm.name = ''
-  searchForm.provider = undefined
+  searchForm.type = undefined
   fetchData()
 }
 
 function handleAdd() {
-  editingId.value = null
-  drawerTitle.value = '新增模型'
-  formState.name = ''
-  formState.provider = undefined
-  formState.status = undefined
+  drawerTitle.value = '新增接入'
+  addForm.type = 'openai'
+  addForm.name = ''
+  addForm.api_url = ''
+  addForm.api_key = ''
+  availableModels.value = []
+  selectedModels.value = []
   drawerVisible.value = true
 }
 
-function handleEdit(record: ModelItem) {
+function handleEdit(record: ProviderItem) {
   editingId.value = record.id
-  drawerTitle.value = '编辑模型'
-  formState.name = record.name
-  formState.provider = record.provider
-  formState.status = record.status
-  drawerVisible.value = true
+  editForm.name = record.name
+  editForm.api_url = record.api_url
+  editForm.api_key = record.api_key || ''
+  editForm.status = record.status
+  editDrawerVisible.value = true
 }
 
-function handleDelete(record: ModelItem) {
+function handleDeleteProvider(record: ProviderItem) {
   Modal.confirm({
     title: '确认删除',
-    content: `确定要删除模型「${record.name}」吗？`,
+    content: `确定要删除接入点「${record.name}」及其所有模型吗？`,
     okType: 'danger',
     okText: '删除',
     cancelText: '取消',
     async onOk() {
-      await deleteModelApi(record.id)
+      await deleteProviderApi(record.id)
       message.success('删除成功')
       fetchData()
     },
   })
 }
 
-function handleActionMenuClick({ key }: { key: string }, record: ModelItem) {
-  handleMenuClick(key, record)
-}
-
-function handleMenuClick(key: string, record: ModelItem) {
+function handleActionMenuClick({ key }: { key: string }, record: ProviderItem) {
   switch (key) {
-    case 'edit': handleEdit(record); break
-    case 'delete': handleDelete(record); break
+    case 'edit':
+      handleEdit(record)
+      break
+    case 'delete':
+      handleDeleteProvider(record)
+      break
   }
 }
 
-async function handleStatusChange(record: ModelItem) {
-  const newStatus = record.status === 'active' ? 'inactive' : 'active'
+function handleExpand(expanded: boolean, record: ProviderItem) {
+  if (expanded) {
+    expandedRowKeys.value = [...expandedRowKeys.value, record.id]
+  } else {
+    expandedRowKeys.value = expandedRowKeys.value.filter((k) => k !== record.id)
+  }
+}
+
+async function handleFetchModels() {
+  if (!addForm.api_url) {
+    message.warning('请先填写 API 地址')
+    return
+  }
+  fetchLoading.value = true
+  availableModels.value = []
+  selectedModels.value = []
   try {
-    await updateModelApi(record.id, { ...record, status: newStatus })
-    message.success('状态更新成功')
-    await fetchData()
-  } catch {
-    message.error('状态更新失败')
+    const res = await fetchRemoteModelsApi({
+      type: addForm.type,
+      api_url: addForm.api_url,
+      api_key: addForm.api_key || undefined,
+    })
+    availableModels.value = res.models.map((name) => ({ name, checked: false }))
+  } catch (e: any) {
+    message.error(e?.response?.data?.detail || '获取模型列表失败')
+  } finally {
+    fetchLoading.value = false
   }
 }
 
-async function handleSubmit() {
-  if (!formState.name || !formState.provider) {
+async function handleSubmitAdd() {
+  if (!addForm.name || !addForm.api_url) {
     message.warning('请填写完整信息')
+    return
+  }
+  if (selectedModels.value.length === 0) {
+    message.warning('请至少选择一个模型')
     return
   }
   submitLoading.value = true
   try {
-    const data = { ...formState }
-    if (editingId.value === null && !data.status) {
-      data.status = 'inactive'
-    }
-    if (editingId.value !== null) {
-      await updateModelApi(editingId.value, { name: data.name, provider: data.provider!, status: data.status as 'active' | 'inactive' })
-      message.success('更新成功')
-    } else {
-      await createModelApi({ name: data.name, provider: data.provider!, status: data.status as 'active' | 'inactive' })
-      message.success('创建成功')
-    }
+    await createProviderApi({
+      name: addForm.name,
+      type: addForm.type,
+      api_url: addForm.api_url,
+      api_key: addForm.api_key || undefined,
+      models: selectedModels.value,
+    })
+    message.success('创建成功')
     drawerVisible.value = false
     fetchData()
   } finally {
@@ -228,5 +377,52 @@ async function handleSubmit() {
   }
 }
 
+async function handleSubmitEdit() {
+  if (!editForm.name || !editForm.api_url) {
+    message.warning('请填写完整信息')
+    return
+  }
+  submitLoading.value = true
+  try {
+    await updateProviderApi(editingId.value!, {
+      name: editForm.name,
+      api_url: editForm.api_url,
+      api_key: editForm.api_key || undefined,
+      status: editForm.status,
+    })
+    message.success('更新成功')
+    editDrawerVisible.value = false
+    fetchData()
+  } finally {
+    submitLoading.value = false
+  }
+}
+
+async function handleDeleteModel(model: LlmModelItem) {
+  Modal.confirm({
+    title: '确认删除',
+    content: `确定要删除模型「${model.model_name}」吗？`,
+    okType: 'danger',
+    okText: '删除',
+    cancelText: '取消',
+    async onOk() {
+      await deleteModelApi(model.id)
+      message.success('删除成功')
+      fetchData()
+    },
+  })
+}
+
+function handleTest(model: LlmModelItem) {
+  testModel.value = { id: model.id, model_name: model.model_name }
+  chatVisible.value = true
+}
+
 onMounted(fetchData)
 </script>
+
+<style scoped>
+.model-sub-table {
+  padding: 8px 0 8px 40px;
+}
+</style>
