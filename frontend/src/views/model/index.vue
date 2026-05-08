@@ -180,6 +180,32 @@
         </div>
       </template>
     </a-drawer>
+
+    <!-- Test chat modal -->
+    <a-modal
+      :title="testModel ? `测试 - ${testModel.model_name}` : ''"
+      :open="chatVisible"
+      :footer="null"
+      width="600px"
+      @cancel="closeChat"
+      :destroy-on-close="true"
+    >
+      <div class="chat-messages" ref="chatContainerRef">
+        <div v-for="(msg, i) in messages" :key="i" :class="['chat-message', msg.role]">
+          {{ msg.content }}
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <a-textarea
+          v-model:value="chatInput"
+          placeholder="请输入消息..."
+          :rows="2"
+          :disabled="chatLoading"
+          @keydown.enter.prevent="sendChatMessage"
+        />
+        <a-button type="primary" :loading="chatLoading" @click="sendChatMessage">发送</a-button>
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -198,9 +224,11 @@ import {
   deleteProviderApi,
   fetchRemoteModelsApi,
   deleteModelApi,
+  getChatStreamUrl,
   type ProviderItem,
   type LlmModelItem,
 } from '@/api/model'
+import { useUserStore } from '@/stores/user'
 
 const { drawerWidth } = useDrawerWidth()
 const tableScroll = useTableScrollY()
@@ -255,6 +283,11 @@ const editForm = reactive({
 // test model state (placeholder for chat modal in Task 8)
 const testModel = ref<{ id: number; model_name: string } | null>(null)
 const chatVisible = ref(false)
+const messages = ref<{ role: 'user' | 'assistant'; content: string }[]>([])
+const chatInput = ref('')
+const chatLoading = ref(false)
+const abortController = ref<AbortController | null>(null)
+const chatContainerRef = ref<HTMLElement | null>(null)
 
 async function fetchData() {
   loading.value = true
@@ -415,7 +448,77 @@ async function handleDeleteModel(model: LlmModelItem) {
 
 function handleTest(model: LlmModelItem) {
   testModel.value = { id: model.id, model_name: model.model_name }
+  messages.value = []
+  chatInput.value = ''
   chatVisible.value = true
+}
+
+function closeChat() {
+  if (abortController.value) {
+    abortController.value.abort()
+    abortController.value = null
+  }
+  chatVisible.value = false
+  chatLoading.value = false
+}
+
+async function sendChatMessage() {
+  if (!chatInput.value.trim() || !testModel.value) return
+  const userMsg = chatInput.value.trim()
+  messages.value.push({ role: 'user', content: userMsg })
+  chatInput.value = ''
+  chatLoading.value = true
+
+  const assistantMsg = { role: 'assistant' as const, content: '' }
+  messages.value.push(assistantMsg)
+  abortController.value = new AbortController()
+
+  try {
+    const userStore = useUserStore()
+    const response = await fetch(getChatStreamUrl(testModel.value.id), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userStore.token}`,
+      },
+      body: JSON.stringify({ message: userMsg }),
+      signal: abortController.value.signal,
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    const reader = response.body!.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        try {
+          const chunk = JSON.parse(line.slice(6))
+          assistantMsg.content += chunk.content || ''
+          // Force reactivity
+          messages.value = [...messages.value]
+          if (chunk.done) break
+        } catch { /* skip malformed chunk */ }
+      }
+    }
+  } catch (err: any) {
+    if (err.name !== 'AbortError') {
+      assistantMsg.content += '\n[连接错误]'
+      messages.value = [...messages.value]
+    }
+  } finally {
+    chatLoading.value = false
+    abortController.value = null
+  }
 }
 
 onMounted(fetchData)
@@ -424,5 +527,39 @@ onMounted(fetchData)
 <style scoped>
 .model-sub-table {
   padding: 8px 0 8px 40px;
+}
+.chat-messages {
+  height: 400px;
+  overflow-y: auto;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.chat-message {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  max-width: 80%;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-message.user {
+  background: #1677ff;
+  color: #fff;
+  margin-left: auto;
+}
+.chat-message.assistant {
+  background: #fff;
+  color: #333;
+  border: 1px solid #e8e8e8;
+}
+.chat-input-area {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.chat-input-area .ant-btn {
+  flex-shrink: 0;
 }
 </style>
