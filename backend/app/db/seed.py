@@ -57,6 +57,9 @@ PERMISSIONS = [
     {"name": "操作日志查看", "identifier": "operation-log:read", "type": "API", "status": "active"},
     {"name": "登录日志查看", "identifier": "login-log:read", "type": "API", "status": "active"},
     {"name": "用户重置密码", "identifier": "user:reset-password", "type": "按钮", "status": "active"},
+    {"name": "模型新增", "identifier": "model:create", "type": "按钮", "status": "active"},
+    {"name": "模型编辑", "identifier": "model:update", "type": "按钮", "status": "active"},
+    {"name": "模型删除", "identifier": "model:delete", "type": "按钮", "status": "active"},
 ]
 
 USERS = [
