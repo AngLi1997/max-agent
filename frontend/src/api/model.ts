@@ -50,8 +50,8 @@ export interface ModelListResult {
 
 /* ---- Provider APIs ---- */
 
-export function getProviderListApi(): Promise<ModelListResult> {
-  return request.get('/providers/')
+export function getProviderListApi(params?: { name?: string; type?: string }): Promise<ModelListResult> {
+  return request.get('/providers/', { params })
 }
 
 export function getProviderApi(id: number): Promise<ProviderItem> {

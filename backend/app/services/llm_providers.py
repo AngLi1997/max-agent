@@ -2,7 +2,7 @@ import json
 from typing import Sequence
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -35,13 +35,21 @@ async def fetch_remote_models(payload: FetchModelsRequest) -> list[str]:
         raise ValueError(f"Unsupported provider type: {payload.type}")
 
 
-async def get_providers(session: AsyncSession) -> tuple[Sequence[LlmProvider], int]:
+async def get_providers(
+    session: AsyncSession,
+    name: str | None = None,
+    type_: str | None = None,
+) -> tuple[Sequence[LlmProvider], int]:
     """Get all providers with their models loaded."""
     q = (
         select(LlmProvider)
         .options(selectinload(LlmProvider.models))
         .order_by(LlmProvider.created_at.desc())
     )
+    if name:
+        q = q.where(LlmProvider.name.ilike(f"%{name}%"))
+    if type_:
+        q = q.where(LlmProvider.type == type_)
     rows = (await session.scalars(q)).all()
     return rows, len(rows)
 
@@ -58,6 +66,9 @@ async def create_provider(
     api_key: str | None,
     model_names: list[str],
 ) -> LlmProvider:
+    existing = await session.scalar(select(LlmProvider).where(LlmProvider.name == name))
+    if existing:
+        raise ValueError("接入点名称已存在")
     provider = LlmProvider(
         name=name,
         type=type_,
@@ -89,7 +100,10 @@ async def update_provider(
     api_key: str | None,
     status: str | None,
 ) -> LlmProvider:
-    if name is not None:
+    if name is not None and name != provider.name:
+        existing = await session.scalar(select(LlmProvider).where(LlmProvider.name == name))
+        if existing:
+            raise ValueError("接入点名称已存在")
         provider.name = name
     if api_url is not None:
         provider.api_url = api_url
@@ -138,46 +152,51 @@ async def chat_with_model_stream(
     if provider.api_key:
         headers["Authorization"] = f"Bearer {provider.api_key}"
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        if provider.type == "openai":
-            url = provider.api_url.rstrip("/") + "/v1/chat/completions"
-            body = {
-                "model": model_name,
-                "messages": _build_openai_messages(user_message),
-                "stream": True,
-            }
-            async with client.stream("POST", url, json=body, headers=headers) as resp:
-                resp.raise_for_status()
-                async for line in resp.aiter_lines():
-                    if not line.startswith("data: "):
-                        continue
-                    data_str = line[6:]
-                    if data_str.strip() == "[DONE]":
-                        yield json.dumps({"content": "", "done": True})
-                        return
-                    chunk = json.loads(data_str)
-                    delta = chunk.get("choices", [{}])[0].get("delta", {})
-                    content = delta.get("content", "")
-                    yield json.dumps({"content": content, "done": False})
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            if provider.type == "openai":
+                url = provider.api_url.rstrip("/") + "/v1/chat/completions"
+                body = {
+                    "model": model_name,
+                    "messages": _build_openai_messages(user_message),
+                    "stream": True,
+                }
+                async with client.stream("POST", url, json=body, headers=headers) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        if not line.startswith("data: "):
+                            continue
+                        data_str = line[6:]
+                        if data_str.strip() == "[DONE]":
+                            yield f"data: {json.dumps({'content': '', 'done': True})}\n\n"
+                            return
+                        chunk = json.loads(data_str)
+                        delta = chunk.get("choices", [{}])[0].get("delta", {})
+                        content = delta.get("content", "")
+                        yield f"data: {json.dumps({'content': content, 'done': False})}\n\n"
 
-        elif provider.type == "ollama":
-            url = provider.api_url.rstrip("/") + "/api/chat"
-            body = {
-                "model": model_name,
-                "messages": _build_ollama_messages(user_message),
-                "stream": True,
-            }
-            async with client.stream("POST", url, json=body, headers=headers) as resp:
-                resp.raise_for_status()
-                async for line in resp.aiter_lines():
-                    if not line:
-                        continue
-                    chunk = json.loads(line)
-                    content = chunk.get("message", {}).get("content", "")
-                    done = chunk.get("done", False)
-                    yield json.dumps({"content": content, "done": done})
-                    if done:
-                        return
+            elif provider.type == "ollama":
+                url = provider.api_url.rstrip("/") + "/api/chat"
+                body = {
+                    "model": model_name,
+                    "messages": _build_ollama_messages(user_message),
+                    "stream": True,
+                }
+                async with client.stream("POST", url, json=body, headers=headers) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        if not line:
+                            continue
+                        chunk = json.loads(line)
+                        content = chunk.get("message", {}).get("content", "")
+                        done = chunk.get("done", False)
+                        yield f"data: {json.dumps({'content': content, 'done': done})}\n\n"
+                        if done:
+                            return
 
-        else:
-            raise ValueError(f"Unsupported provider type: {provider.type}")
+            else:
+                yield f"data: {json.dumps({'content': f'不支持的接入类型: {provider.type}', 'done': True})}\n\n"
+    except httpx.HTTPError as e:
+        yield f"data: {json.dumps({'content': f'[连接错误: {str(e)}]', 'done': True})}\n\n"
+    except Exception as e:
+        yield f"data: {json.dumps({'content': f'[错误: {str(e)}]', 'done': True})}\n\n"

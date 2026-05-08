@@ -132,8 +132,8 @@
         </a-form-item>
         <a-form-item label="选择模型" v-if="availableModels.length > 0">
           <a-checkbox-group v-model:value="selectedModels">
-            <a-checkbox v-for="m in availableModels" :key="m.name" :value="m.name">
-              {{ m.name }}
+            <a-checkbox v-for="m in availableModels" :key="m" :value="m">
+              {{ m }}
             </a-checkbox>
           </a-checkbox-group>
         </a-form-item>
@@ -269,7 +269,7 @@ const addForm = reactive({
   api_key: '',
 })
 const fetchLoading = ref(false)
-const availableModels = ref<{ name: string; checked: boolean }[]>([])
+const availableModels = ref<string[]>([])
 const selectedModels = ref<string[]>([])
 
 // edit provider form
@@ -291,7 +291,10 @@ const abortController = ref<AbortController | null>(null)
 async function fetchData() {
   loading.value = true
   try {
-    const res = await getProviderListApi()
+    const params: Record<string, string> = {}
+    if (searchForm.name) params.name = searchForm.name
+    if (searchForm.type) params.type = searchForm.type
+    const res = await getProviderListApi(Object.keys(params).length > 0 ? params : undefined)
     dataSource.value = res.list
     total.value = res.total
   } finally {
@@ -375,7 +378,7 @@ async function handleFetchModels() {
       api_url: addForm.api_url,
       api_key: addForm.api_key || undefined,
     })
-    availableModels.value = res.models.map((name) => ({ name, checked: false }))
+    availableModels.value = res.models
   } catch (e: any) {
     message.error(e?.response?.data?.detail || '获取模型列表失败')
   } finally {
