@@ -1,3 +1,4 @@
+import json
 from typing import Sequence
 
 import httpx
@@ -114,3 +115,69 @@ async def delete_model(session: AsyncSession, model_id: int) -> LlmModel | None:
     if model:
         await session.delete(model)
     return model
+
+
+def _build_openai_messages(user_message: str) -> list[dict]:
+    return [{"role": "user", "content": user_message}]
+
+
+def _build_ollama_messages(user_message: str) -> list[dict]:
+    return [{"role": "user", "content": user_message}]
+
+
+async def chat_with_model_stream(
+    provider: LlmProvider,
+    model_name: str,
+    user_message: str,
+):
+    """Build and send a streaming chat request to the provider API.
+
+    Returns an async generator yielding SSE-formatted strings.
+    """
+    headers = {"Content-Type": "application/json"}
+    if provider.api_key:
+        headers["Authorization"] = f"Bearer {provider.api_key}"
+
+    async with httpx.AsyncClient(timeout=60) as client:
+        if provider.type == "openai":
+            url = provider.api_url.rstrip("/") + "/v1/chat/completions"
+            body = {
+                "model": model_name,
+                "messages": _build_openai_messages(user_message),
+                "stream": True,
+            }
+            async with client.stream("POST", url, json=body, headers=headers) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data_str = line[6:]
+                    if data_str.strip() == "[DONE]":
+                        yield json.dumps({"content": "", "done": True})
+                        return
+                    chunk = json.loads(data_str)
+                    delta = chunk.get("choices", [{}])[0].get("delta", {})
+                    content = delta.get("content", "")
+                    yield json.dumps({"content": content, "done": False})
+
+        elif provider.type == "ollama":
+            url = provider.api_url.rstrip("/") + "/api/chat"
+            body = {
+                "model": model_name,
+                "messages": _build_ollama_messages(user_message),
+                "stream": True,
+            }
+            async with client.stream("POST", url, json=body, headers=headers) as resp:
+                resp.raise_for_status()
+                async for line in resp.aiter_lines():
+                    if not line:
+                        continue
+                    chunk = json.loads(line)
+                    content = chunk.get("message", {}).get("content", "")
+                    done = chunk.get("done", False)
+                    yield json.dumps({"content": content, "done": done})
+                    if done:
+                        return
+
+        else:
+            raise ValueError(f"Unsupported provider type: {provider.type}")

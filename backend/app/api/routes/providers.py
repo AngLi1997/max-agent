@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 import httpx
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db_session
+from app.models.llm_model import LlmModel
 from app.models.llm_provider import LlmProvider
 from app.models.user import User
 from app.schemas.common import ListResponse
@@ -16,7 +20,6 @@ from app.schemas.llm_provider import (
     ProviderUpdateRequest,
 )
 from app.services.audit import write_operation_log
-from app.services.auth import current_active_user
 from app.services.authorization import require_permission
 from app.services.llm_providers import (
     create_provider,
@@ -200,3 +203,33 @@ async def delete_model_endpoint(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="模型不存在")
     await session.commit()
     return {"message": "删除成功"}
+
+
+@router.post("/models/{model_id}/chat")
+async def chat_with_model(
+    model_id: int,
+    payload: ChatRequest,
+    session: AsyncSession = Depends(get_db_session),
+    _user: User = Depends(require_permission("model:view")),
+):
+    from app.services.llm_providers import chat_with_model_stream
+
+    q = (
+        select(LlmModel)
+        .options(selectinload(LlmModel.provider))
+        .where(LlmModel.id == model_id)
+    )
+    model = (await session.scalars(q)).first()
+    if not model:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="模型不存在")
+    if not model.provider:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="关联接入点不存在")
+
+    return StreamingResponse(
+        chat_with_model_stream(model.provider, model.model_name, payload.message),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )}
