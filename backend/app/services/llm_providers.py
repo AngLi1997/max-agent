@@ -63,7 +63,8 @@ async def get_providers(
 
 
 async def get_provider_by_id(session: AsyncSession, provider_id: int) -> LlmProvider | None:
-    return await session.get(LlmProvider, provider_id, options=[selectinload(LlmProvider.models)])
+    q = select(LlmProvider).options(selectinload(LlmProvider.models)).where(LlmProvider.id == provider_id)
+    return (await session.scalars(q)).first()
 
 
 async def create_provider(
