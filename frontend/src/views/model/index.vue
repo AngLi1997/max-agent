@@ -190,7 +190,7 @@
       @cancel="closeChat"
       :destroy-on-close="true"
     >
-      <div class="chat-messages" ref="chatContainerRef">
+      <div class="chat-messages">
         <div v-for="(msg, i) in messages" :key="i" :class="['chat-message', msg.role]">
           {{ msg.content }}
         </div>
@@ -287,7 +287,6 @@ const messages = ref<{ role: 'user' | 'assistant'; content: string }[]>([])
 const chatInput = ref('')
 const chatLoading = ref(false)
 const abortController = ref<AbortController | null>(null)
-const chatContainerRef = ref<HTMLElement | null>(null)
 
 async function fetchData() {
   loading.value = true
