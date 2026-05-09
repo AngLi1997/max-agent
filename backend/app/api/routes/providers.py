@@ -51,7 +51,6 @@ def _mask_api_key(key: str | None) -> str | None:
 def _provider_to_item(provider: LlmProvider) -> ProviderItem:
     return ProviderItem(
         id=provider.id,
-        name=provider.name,
         type=provider.type,
         api_url=provider.api_url,
         api_key=_mask_api_key(provider.api_key),
@@ -61,6 +60,7 @@ def _provider_to_item(provider: LlmProvider) -> ProviderItem:
                 id=m.id,
                 model_name=m.model_name,
                 status=m.status,
+                remark=m.remark,
                 created_at=m.created_at,
             )
             for m in (provider.models or [])
@@ -72,12 +72,11 @@ def _provider_to_item(provider: LlmProvider) -> ProviderItem:
 
 @router.get("/", response_model=ListResponse[ProviderItem])
 async def list_providers(
-    name: str | None = None,
     type: str | None = None,
     session: AsyncSession = Depends(get_db_session),
     _user: User = Depends(require_permission("model:view")),
 ) -> ListResponse[ProviderItem]:
-    rows, total = await get_providers(session, name=name, type_=type)
+    rows, total = await get_providers(session, type_=type)
     return ListResponse(list=[_provider_to_item(r) for r in rows], total=total)
 
 
@@ -116,7 +115,6 @@ async def create_provider_endpoint(
     try:
         provider = await create_provider(
             session,
-            name=payload.name,
             type_=payload.type,
             api_url=payload.api_url,
             api_key=payload.api_key,
@@ -132,7 +130,7 @@ async def create_provider_endpoint(
         action="创建接入点",
         method="POST",
         result="成功",
-        detail=f"创建接入点 {provider.name}",
+        detail=f"创建接入点 ({payload.type}/{payload.api_url})",
         ip=get_client_ip(request),
     )
     await session.commit()
@@ -154,7 +152,6 @@ async def update_provider_endpoint(
     try:
         provider = await update_provider(
             session, provider,
-            name=payload.name,
             api_url=payload.api_url,
             api_key=payload.api_key,
             status=payload.status,
@@ -169,7 +166,7 @@ async def update_provider_endpoint(
         action="更新接入点",
         method="PUT",
         result="成功",
-        detail=f"更新接入点 {provider.name}",
+        detail=f"更新接入点 ({provider.type}/{provider.api_url})",
         ip=get_client_ip(request),
     )
     await session.commit()
@@ -187,7 +184,7 @@ async def delete_provider_endpoint(
     provider = await get_provider_by_id(session, provider_id)
     if not provider:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="接入点不存在")
-    name = provider.name
+    label = f"{provider.type}/{provider.api_url}"
     await delete_provider(session, provider)
     await write_operation_log(
         session,
@@ -197,7 +194,7 @@ async def delete_provider_endpoint(
         action="删除接入点",
         method="DELETE",
         result="成功",
-        detail=f"删除接入点 {name}",
+        detail=f"删除接入点 ({label})",
         ip=get_client_ip(request),
     )
     await session.commit()
@@ -247,7 +244,7 @@ async def update_model_endpoint(
     model = await session.get(LlmModel, model_id)
     if not model:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="模型不存在")
-    await update_model(session, model, status=payload.status)
+    await update_model(session, model, status=payload.status, remark=payload.remark)
     await session.commit()
     return {"message": "更新成功"}
 

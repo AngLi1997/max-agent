@@ -45,7 +45,6 @@ async def fetch_remote_models(payload: FetchModelsRequest) -> list[str]:
 
 async def get_providers(
     session: AsyncSession,
-    name: str | None = None,
     type_: str | None = None,
 ) -> tuple[Sequence[LlmProvider], int]:
     """Get all providers with their models loaded."""
@@ -54,8 +53,6 @@ async def get_providers(
         .options(selectinload(LlmProvider.models))
         .order_by(LlmProvider.created_at.desc())
     )
-    if name:
-        q = q.where(LlmProvider.name.ilike(f"%{name}%"))
     if type_:
         q = q.where(LlmProvider.type == type_)
     rows = (await session.scalars(q)).all()
@@ -69,17 +66,12 @@ async def get_provider_by_id(session: AsyncSession, provider_id: int) -> LlmProv
 
 async def create_provider(
     session: AsyncSession,
-    name: str,
     type_: str,
     api_url: str,
     api_key: str | None,
     model_names: list[str],
 ) -> LlmProvider:
-    existing = await session.scalar(select(LlmProvider).where(LlmProvider.name == name))
-    if existing:
-        raise ValueError("接入点名称已存在")
     provider = LlmProvider(
-        name=name,
         type=type_,
         api_url=api_url,
         api_key=api_key,
@@ -104,16 +96,10 @@ async def create_provider(
 async def update_provider(
     session: AsyncSession,
     provider: LlmProvider,
-    name: str | None,
     api_url: str | None,
     api_key: str | None,
     status: str | None,
 ) -> LlmProvider:
-    if name is not None and name != provider.name:
-        existing = await session.scalar(select(LlmProvider).where(LlmProvider.name == name))
-        if existing:
-            raise ValueError("接入点名称已存在")
-        provider.name = name
     if api_url is not None:
         provider.api_url = api_url
     if api_key is not None:
@@ -147,7 +133,7 @@ async def get_models(
 ) -> tuple[Sequence[dict], int]:
     """Get flat model list with provider info joined."""
     q = (
-        select(LlmModel, LlmProvider.name, LlmProvider.type, LlmProvider.api_url)
+        select(LlmModel, LlmProvider.type, LlmProvider.api_url)
         .join(LlmProvider, LlmModel.provider_id == LlmProvider.id)
         .order_by(LlmModel.created_at.desc())
     )
@@ -158,15 +144,15 @@ async def get_models(
 
     rows = (await session.execute(q)).all()
     result = []
-    for model, p_name, p_type, p_url in rows:
+    for model, p_type, p_url in rows:
         result.append({
             "id": model.id,
             "provider_id": model.provider_id,
             "model_name": model.model_name,
-            "provider_name": p_name,
             "provider_type": p_type,
             "provider_api_url": p_url,
             "status": model.status,
+            "remark": model.remark,
             "created_at": model.created_at,
         })
     return result, len(result)
@@ -176,9 +162,12 @@ async def update_model(
     session: AsyncSession,
     model: LlmModel,
     status: str | None,
+    remark: str | None = None,
 ) -> LlmModel:
     if status is not None:
         model.status = status
+    if remark is not None:
+        model.remark = remark
     session.add(model)
     await session.flush()
     return model

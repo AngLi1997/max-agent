@@ -9,7 +9,6 @@ class LlmProvider(TimestampMixin, Base):
     __tablename__ = "llm_provider"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
     type: Mapped[str] = mapped_column(String(20), nullable=False)  # "openai" | "ollama"
     api_url: Mapped[str] = mapped_column(String(500), nullable=False)
     api_key: Mapped[str | None] = mapped_column(String(500), nullable=True)

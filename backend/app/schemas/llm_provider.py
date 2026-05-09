@@ -7,6 +7,7 @@ class LlmModelItem(BaseModel):
     id: int
     model_name: str
     status: str
+    remark: str | None = None
     created_at: datetime
 
 
@@ -14,19 +15,19 @@ class ModelListItem(BaseModel):
     id: int
     provider_id: int
     model_name: str
-    provider_name: str
     provider_type: str
     provider_api_url: str
     status: str
+    remark: str | None = None
     created_at: datetime
 
 
 class ModelUpdateRequest(BaseModel):
     status: str | None = None
+    remark: str | None = None
 
 
 class ProviderCreateRequest(BaseModel):
-    name: str
     type: str  # "openai" | "ollama"
     api_url: str
     api_key: str | None = None
@@ -34,7 +35,6 @@ class ProviderCreateRequest(BaseModel):
 
 
 class ProviderUpdateRequest(BaseModel):
-    name: str | None = None
     api_url: str | None = None
     api_key: str | None = None
     status: str | None = None
@@ -42,7 +42,6 @@ class ProviderUpdateRequest(BaseModel):
 
 class ProviderItem(BaseModel):
     id: int
-    name: str
     type: str
     api_url: str
     api_key: str | None

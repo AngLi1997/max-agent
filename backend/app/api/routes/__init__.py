@@ -1,5 +1,6 @@
 from .auth import router as auth_router
 from .configs import router as configs_router
+from .dashboard import router as dashboard_router
 from .health import router as health_router
 from .logs import router as logs_router
 from .menus import router as menus_router
@@ -11,6 +12,7 @@ from .users import router as users_router
 __all__ = [
     "auth_router",
     "configs_router",
+    "dashboard_router",
     "health_router",
     "logs_router",
     "menus_router",

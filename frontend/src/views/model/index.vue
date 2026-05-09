@@ -80,39 +80,32 @@
             <a-select-option value="ollama">Ollama</a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="接入名称" required>
-          <a-input v-model:value="addForm.name" placeholder="请输入接入名称" />
-        </a-form-item>
         <a-form-item label="API 地址" required>
-          <a-input
-            v-model:value="addForm.api_url"
-            placeholder="请输入 API 地址"
-            :addonAfter="addForm.type === 'openai' ? '/v1' : ''"
-          />
+          <div style="display: flex; gap: 8px;">
+            <a-input
+              v-model:value="addForm.api_url"
+              placeholder="请输入 API 地址"
+              :addonAfter="addForm.type === 'openai' ? '/v1' : ''"
+              style="flex: 1"
+            />
+            <a-button :loading="fetchLoading" @click="handleFetchModels">获取模型列表</a-button>
+          </div>
         </a-form-item>
         <a-form-item label="API Key">
           <a-input-password v-model:value="addForm.api_key" placeholder="请输入 API Key（可选）" />
         </a-form-item>
         <a-form-item label="模型名称" required>
-          <a-input v-model:value="addForm.modelName" placeholder="可输入或从下方列表选择模型名称" />
+          <a-auto-complete
+            v-model:value="addForm.modelName"
+            placeholder="可选择或输入模型名称"
+            style="width: 100%"
+            :options="availableModels.map(m => ({ value: m }))"
+            allow-clear
+          />
         </a-form-item>
-        <a-form-item label=" " v-if="!fetchLoading && !availableModels.length">
-          <a-button :loading="fetchLoading" @click="handleFetchModels">获取模型列表</a-button>
+        <a-form-item label="备注">
+          <a-input v-model:value="addForm.remark" placeholder="请输入备注" />
         </a-form-item>
-        <template v-if="availableModels.length > 0">
-          <a-form-item label="模型列表" :colon="false">
-            <a-select
-              v-model:value="selectedModel"
-              placeholder="请选择模型"
-              style="width: 100%"
-            >
-              <a-select-option v-for="m in availableModels" :key="m" :value="m">{{ m }}</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label=" ">
-            <a-button :loading="fetchLoading" @click="handleFetchModels">重新获取</a-button>
-          </a-form-item>
-        </template>
       </a-form>
       <template #footer>
         <div style="text-align: right">
@@ -133,14 +126,14 @@
         <a-form-item label="模型名称">
           <a-input v-model:value="editForm.modelName" disabled />
         </a-form-item>
-        <a-form-item label="接入名称" required>
-          <a-input v-model:value="editForm.name" placeholder="请输入接入名称" />
-        </a-form-item>
         <a-form-item label="API 地址" required>
           <a-input v-model:value="editForm.api_url" placeholder="请输入 API 地址" />
         </a-form-item>
         <a-form-item label="API Key">
           <a-input-password v-model:value="editForm.api_key" placeholder="请输入 API Key（可选）" />
+        </a-form-item>
+        <a-form-item label="备注">
+          <a-input v-model:value="editForm.remark" placeholder="请输入备注" />
         </a-form-item>
         <a-form-item label="状态">
           <a-switch
@@ -171,7 +164,20 @@
     >
       <div ref="chatMessagesRef" class="chat-messages">
         <div v-for="(msg, i) in messages" :key="i" :class="['chat-message', msg.role]">
-          {{ msg.content }}
+          <template v-if="msg.role === 'assistant'">
+            <div v-for="(part, j) in renderMessageParts(msg.content)" :key="j">
+              <div v-if="part.type === 'think'" class="think-block">
+                <details>
+                  <summary class="think-summary">💭 思考过程</summary>
+                  <div class="think-content" v-html="part.html" />
+                </details>
+              </div>
+              <div v-else v-html="part.html" />
+            </div>
+          </template>
+          <template v-else>
+            {{ msg.content }}
+          </template>
         </div>
       </div>
       <div class="chat-input-area">
@@ -191,9 +197,10 @@
 <script setup lang="ts">
 defineOptions({ name: 'Model' })
 
-import { ref, reactive, onMounted, nextTick, watch } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
+import { marked } from 'marked'
 import { useDrawerWidth } from '@/composables/useDrawerWidth'
 import { useTableScrollY } from '@/composables/useTableScrollY'
 import {
@@ -215,7 +222,7 @@ const tableScroll = useTableScrollY()
 const columns = [
   { title: '模型名称', dataIndex: 'model_name', key: 'model_name', width: 180, ellipsis: { showTitle: true } },
   { title: '类型', dataIndex: 'provider_type', key: 'provider_type', width: 100 },
-  { title: '接入名称', dataIndex: 'provider_name', key: 'provider_name', width: 150, ellipsis: { showTitle: true } },
+  { title: '备注', dataIndex: 'remark', key: 'remark', width: 150, ellipsis: { showTitle: true } },
   { title: 'API 地址', dataIndex: 'provider_api_url', key: 'provider_api_url', width: 250, ellipsis: { showTitle: true } },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const },
   { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 180 },
@@ -235,24 +242,23 @@ const searchForm = reactive({ name: '', type: undefined as string | undefined })
 // add model form
 const addForm = reactive({
   type: 'openai',
-  name: '',
   api_url: '',
   api_key: '',
   modelName: '',
+  remark: '',
 })
 const fetchLoading = ref(false)
 const availableModels = ref<string[]>([])
-const selectedModel = ref<string | undefined>(undefined)
 
 // edit model form
 const editForm = reactive({
   providerId: 0,
   modelId: 0,
   modelName: '',
-  name: '',
   api_url: '',
   api_key: '',
   status: 'active',
+  remark: '',
 })
 
 // test model state
@@ -263,13 +269,6 @@ const chatInput = ref('')
 const chatLoading = ref(false)
 const abortController = ref<AbortController | null>(null)
 const chatMessagesRef = ref<HTMLElement | null>(null)
-
-// Auto-fill model name when selecting from fetched list
-watch(selectedModel, (val) => {
-  if (val) {
-    addForm.modelName = val
-  }
-})
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return ''
@@ -318,12 +317,11 @@ async function handleToggleStatus(record: ModelListItem, checked: boolean) {
 
 function handleAdd() {
   addForm.type = 'openai'
-  addForm.name = ''
   addForm.api_url = ''
   addForm.api_key = ''
   addForm.modelName = ''
+  addForm.remark = ''
   availableModels.value = []
-  selectedModel.value = undefined
   drawerVisible.value = true
 }
 
@@ -332,9 +330,9 @@ async function handleEdit(record: ModelListItem) {
   editForm.providerId = record.provider_id
   editForm.modelName = record.model_name
   editForm.status = record.status
+  editForm.remark = record.remark || ''
   try {
     const provider = await getProviderApi(record.provider_id)
-    editForm.name = provider.name
     editForm.api_url = provider.api_url
     editForm.api_key = provider.api_key || ''
   } catch (e: any) {
@@ -366,7 +364,6 @@ async function handleFetchModels() {
   }
   fetchLoading.value = true
   availableModels.value = []
-  selectedModel.value = undefined
   try {
     const res = await fetchRemoteModelsApi({
       type: addForm.type,
@@ -382,14 +379,13 @@ async function handleFetchModels() {
 }
 
 async function handleSubmitAdd() {
-  if (!addForm.name || !addForm.api_url || !addForm.modelName) {
+  if (!addForm.api_url || !addForm.modelName) {
     message.warning('请填写完整信息')
     return
   }
   submitLoading.value = true
   try {
     await createProviderApi({
-      name: addForm.name,
       type: addForm.type,
       api_url: addForm.api_url,
       api_key: addForm.api_key || undefined,
@@ -406,18 +402,17 @@ async function handleSubmitAdd() {
 }
 
 async function handleSubmitEdit() {
-  if (!editForm.name || !editForm.api_url) {
-    message.warning('请填写完整信息')
+  if (!editForm.api_url) {
+    message.warning('请填写 API 地址')
     return
   }
   submitLoading.value = true
   try {
     await updateProviderApi(editForm.providerId, {
-      name: editForm.name,
       api_url: editForm.api_url,
       api_key: editForm.api_key || undefined,
     })
-    await updateModelApi(editForm.modelId, { status: editForm.status })
+    await updateModelApi(editForm.modelId, { status: editForm.status, remark: editForm.remark || undefined })
     message.success('更新成功')
     editDrawerVisible.value = false
     fetchData()
@@ -442,6 +437,43 @@ function closeChat() {
   }
   chatVisible.value = false
   chatLoading.value = false
+}
+
+function renderMessageParts(content: string): { type: 'think' | 'text'; html: string }[] {
+  if (!content) return []
+  const parts: { type: 'think' | 'text'; html: string }[] = []
+  const openTag = '<think>'
+  const closeTag = '</think>'
+
+  // Handle unclosed <think> during streaming: if there's an open tag without close,
+  // treat everything from open tag onward as think content
+  let processed = content
+  const lastOpen = processed.lastIndexOf(openTag)
+  const lastClose = processed.lastIndexOf(closeTag)
+  if (lastOpen > lastClose) {
+    // Unclosed <think> tag - close it for parsing
+    processed = processed.slice(0, lastOpen) + openTag + processed.slice(lastOpen + openTag.length) + closeTag
+  }
+
+  const regex = /<think>([\s\S]*?)<\/think>/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(processed)) !== null) {
+    if (match.index > lastIndex) {
+      const text = processed.slice(lastIndex, match.index)
+      parts.push({ type: 'text', html: marked.parse(text, { async: false }) as string })
+    }
+    parts.push({ type: 'think', html: marked.parse(match[1], { async: false }) as string })
+    lastIndex = match.index + match[0].length
+  }
+  if (lastIndex < processed.length) {
+    const text = processed.slice(lastIndex)
+    parts.push({ type: 'text', html: marked.parse(text, { async: false }) as string })
+  }
+  if (parts.length === 0) {
+    parts.push({ type: 'text', html: marked.parse(content, { async: false }) as string })
+  }
+  return parts
 }
 
 function scrollChatToBottom() {
@@ -556,5 +588,25 @@ onMounted(fetchData)
 }
 .chat-input-area .ant-btn {
   flex-shrink: 0;
+}
+.think-block {
+  margin: 8px 0;
+  border-left: 3px solid #d9d9d9;
+  padding-left: 8px;
+}
+.think-summary {
+  color: #999;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.think-content {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #888;
+  line-height: 1.6;
+}
+.think-content p {
+  margin-bottom: 4px;
 }
 </style>

@@ -1,3 +1,5 @@
+import request from './request'
+
 export interface DashboardStats {
   userCount: number
   modelCount: number
@@ -6,11 +8,7 @@ export interface DashboardStats {
 }
 
 export function getStatsApi(): Promise<DashboardStats> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ userCount: 128, modelCount: 15, skillCount: 42, toolCount: 23 })
-    }, 300)
-  })
+  return request.get('/stats/dashboard')
 }
 
 export interface TrendItem {

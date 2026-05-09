@@ -7,12 +7,12 @@ export interface LlmModelItem {
   id: number
   model_name: string
   status: string
+  remark: string | null
   created_at: string
 }
 
 export interface ProviderItem {
   id: number
-  name: string
   type: string
   api_url: string
   api_key: string | null
@@ -23,7 +23,6 @@ export interface ProviderItem {
 }
 
 export interface ProviderCreateParams {
-  name: string
   type: string
   api_url: string
   api_key?: string
@@ -31,7 +30,6 @@ export interface ProviderCreateParams {
 }
 
 export interface ProviderUpdateParams {
-  name?: string
   api_url?: string
   api_key?: string
   status?: string
@@ -48,15 +46,16 @@ export interface ModelListItem {
   id: number
   provider_id: number
   model_name: string
-  provider_name: string
   provider_type: string
   provider_api_url: string
   status: string
+  remark: string | null
   created_at: string
 }
 
 export interface ModelUpdateParams {
   status?: string
+  remark?: string
 }
 
 export interface ChatMessage {

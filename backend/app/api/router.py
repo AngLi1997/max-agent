@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.routes import (
     auth_router,
     configs_router,
+    dashboard_router,
     health_router,
     logs_router,
     menus_router,
@@ -22,3 +23,4 @@ api_router.include_router(menus_router)
 api_router.include_router(configs_router)
 api_router.include_router(logs_router)
 api_router.include_router(providers_router)
+api_router.include_router(dashboard_router)
